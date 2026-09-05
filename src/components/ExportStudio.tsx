@@ -1,566 +1,84 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { VoyageData } from '../types';
-import { formatNauticalCoordinate, formatNM, formatKnots, formatDuration } from '../utils/geoUtils';
-import { 
-  Download, 
-  Printer, 
-  Sparkles, 
-  Compass, 
-  Ship, 
-  Check, 
-  Sliders, 
-  Image as ImageIcon,
-  Copy
-} from 'lucide-react';
+import { formatNM, formatDuration } from '../utils/geoUtils';
+import { Check, Copy, Download, Printer, Route, Sliders } from 'lucide-react';
 
-interface ExportStudioProps {
-  voyage: VoyageData;
-}
+interface ExportStudioProps { voyage: VoyageData; }
 
 export const ExportStudio: React.FC<ExportStudioProps> = ({ voyage }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Poster Configuration States
-  const [posterTitle, setPosterTitle] = useState(voyage.metadata.title);
-  const [subtitle, setSubtitle] = useState(`${voyage.metadata.vesselName} • Skipper: ${voyage.metadata.skipper || 'M. Jansen'}`);
-  const [theme, setTheme] = useState<'navy' | 'light' | 'dark' | 'vintage'>('navy');
-  const [showCompass, setShowCompass] = useState(true);
-  const [showBorderScale, setShowBorderScale] = useState(true);
-  const [showMetricsCard, setShowMetricsCard] = useState(true);
+  const [title, setTitle] = useState(voyage.metadata.title);
+  const [subtitle, setSubtitle] = useState(voyage.metadata.vesselName);
+  const [showMetrics, setShowMetrics] = useState(true);
   const [isRendering, setIsRendering] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // Re-render canvas whenever voyage or options change
-  useEffect(() => {
-    renderPoster();
-  }, [voyage, posterTitle, subtitle, theme, showCompass, showBorderScale, showMetricsCard]);
+  useEffect(() => { setTitle(voyage.metadata.title); setSubtitle(voyage.metadata.vesselName); }, [voyage.metadata.title, voyage.metadata.vesselName]);
+  useEffect(() => { renderSheet(); }, [voyage, title, subtitle, showMetrics]);
 
-  const renderPoster = () => {
+  const renderSheet = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
     setIsRendering(true);
 
-    const width = 1600;
-    const height = 1100;
-    canvas.width = width;
-    canvas.height = height;
-
+    const width = 1600, height = 1100;
+    canvas.width = width; canvas.height = height;
+    const paper = '#f7f4ec', ink = '#24302e', muted = '#69736f', sea = '#456f75', moss = '#6f7c68', sand = '#b59668', line = '#d8d2c5', white = '#fffdf8';
+    ctx.fillStyle = paper; ctx.fillRect(0, 0, width, height);
     const points = voyage.points;
-    if (points.length === 0) return;
+    if (!points.length) { setIsRendering(false); return; }
 
-    // Theme Color Palettes
-    const palettes = {
-      navy: {
-        bg: '#0a192f',
-        water: '#0c2240',
-        grid: '#1e3a5f',
-        route: '#38bdf8',
-        text: '#f8fafc',
-        subtext: '#94a3b8',
-        border: '#38bdf8',
-        cardBg: 'rgba(10, 25, 47, 0.85)',
-      },
-      light: {
-        bg: '#f8fafc',
-        water: '#e2e8f0',
-        grid: '#cbd5e1',
-        route: '#0284c7',
-        text: '#0f172a',
-        subtext: '#64748b',
-        border: '#0284c7',
-        cardBg: 'rgba(255, 255, 255, 0.9)',
-      },
-      dark: {
-        bg: '#090d16',
-        water: '#0f172a',
-        grid: '#1e293b',
-        route: '#06b6d4',
-        text: '#f8fafc',
-        subtext: '#94a3b8',
-        border: '#06b6d4',
-        cardBg: 'rgba(15, 23, 42, 0.9)',
-      },
-      vintage: {
-        bg: '#fbf7ee',
-        water: '#eedfc3',
-        grid: '#d5c4a1',
-        route: '#9e2a2b',
-        text: '#2b2d42',
-        subtext: '#6b705c',
-        border: '#9e2a2b',
-        cardBg: 'rgba(251, 247, 238, 0.92)',
-      },
-    };
+    // Editorial masthead
+    ctx.fillStyle = moss; ctx.font = '600 18px Avenir Next, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('N O R T H E R N   L I N E S   ·   R O U T E   S H E E T', 92, 82);
+    ctx.strokeStyle = line; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(92, 108); ctx.lineTo(width - 92, 108); ctx.stroke();
 
-    const curTheme = palettes[theme];
+    ctx.fillStyle = ink; ctx.font = '600 54px Avenir Next, sans-serif'; ctx.fillText(title || 'Reiseroute', 92, 178);
+    ctx.fillStyle = muted; ctx.font = '400 24px Avenir Next, sans-serif'; ctx.fillText(subtitle || 'Northern Lines Journey', 94, 220);
 
-    // 1. Draw Background
-    ctx.fillStyle = curTheme.bg;
-    ctx.fillRect(0, 0, width, height);
+    const mapX = 92, mapY = 285, mapW = width - 184, mapH = 570;
+    ctx.fillStyle = white; ctx.fillRect(mapX, mapY, mapW, mapH);
+    ctx.strokeStyle = line; ctx.lineWidth = 2; ctx.strokeRect(mapX, mapY, mapW, mapH);
 
-    // Map Margins
-    const margin = 80;
-    const mapW = width - margin * 2;
-    const mapH = height - margin * 2;
-
-    // Map area background
-    ctx.fillStyle = curTheme.water;
-    ctx.fillRect(margin, margin, mapW, mapH);
-
-    // Bounds calculation with padding
     const bounds = voyage.bounds;
-    const latSpan = Math.max(0.1, bounds.maxLat - bounds.minLat);
-    const lonSpan = Math.max(0.1, bounds.maxLon - bounds.minLon);
-    const padLat = latSpan * 0.15;
-    const padLon = lonSpan * 0.15;
+    const latSpan = Math.max(.01, bounds.maxLat - bounds.minLat), lonSpan = Math.max(.01, bounds.maxLon - bounds.minLon);
+    const padLat = latSpan * .12, padLon = lonSpan * .12;
+    const minLat = bounds.minLat - padLat, maxLat = bounds.maxLat + padLat, minLon = bounds.minLon - padLon, maxLon = bounds.maxLon + padLon;
+    const inner = 54;
+    const project = (lat: number, lon: number) => ({ x: mapX + inner + ((lon-minLon)/(maxLon-minLon))*(mapW-inner*2), y: mapY + mapH-inner-((lat-minLat)/(maxLat-minLat))*(mapH-inner*2) });
 
-    const minLat = bounds.minLat - padLat;
-    const maxLat = bounds.maxLat + padLat;
-    const minLon = bounds.minLon - padLon;
-    const maxLon = bounds.maxLon + padLon;
+    // Very restrained geographic field: route is the subject, not a fake chart.
+    ctx.strokeStyle = '#e8e3d8'; ctx.lineWidth = 1;
+    for (let i=1;i<4;i++) { const y=mapY+(mapH/4)*i; ctx.beginPath(); ctx.moveTo(mapX+inner,y); ctx.lineTo(mapX+mapW-inner,y); ctx.stroke(); }
+    for (let i=1;i<6;i++) { const x=mapX+(mapW/6)*i; ctx.beginPath(); ctx.moveTo(x,mapY+inner); ctx.lineTo(x,mapY+mapH-inner); ctx.stroke(); }
 
-    // Projection function: Lat/Lon to Canvas X/Y (Mercator approximation)
-    const project = (lat: number, lon: number) => {
-      const x = margin + ((lon - minLon) / (maxLon - minLon)) * mapW;
-      const y = margin + mapH - ((lat - minLat) / (maxLat - minLat)) * mapH;
-      return { x, y };
-    };
+    ctx.strokeStyle = sea; ctx.lineWidth = 7; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath();
+    points.forEach((p,i)=>{ const q=project(p.lat,p.lon); if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y); }); ctx.stroke();
 
-    // 2. Graticule / Coordinate Grid Lines
-    ctx.strokeStyle = curTheme.grid;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
+    const start=project(points[0].lat,points[0].lon), end=project(points[points.length-1].lat,points[points.length-1].lon);
+    [[start,moss],[end,sand]].forEach(([p,c])=>{ const q=p as {x:number;y:number}; ctx.fillStyle=white;ctx.beginPath();ctx.arc(q.x,q.y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle=c as string;ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);ctx.fill(); });
+    ctx.fillStyle=muted;ctx.font='500 15px Avenir Next, sans-serif';ctx.fillText('START',start.x+18,start.y+5);ctx.textAlign='right';ctx.fillText('ZIEL',end.x-18,end.y+5);ctx.textAlign='left';
 
-    const latStep = latSpan / 4;
-    for (let l = minLat + latStep; l < maxLat; l += latStep) {
-      const p1 = project(l, minLon);
-      const p2 = project(l, maxLon);
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-
-      // Label
-      ctx.fillStyle = curTheme.subtext;
-      ctx.font = '11px monospace';
-      ctx.fillText(`${l.toFixed(2)}°N`, margin + 8, p1.y - 4);
+    if (showMetrics) {
+      const y=930; ctx.strokeStyle=line;ctx.beginPath();ctx.moveTo(92,y-38);ctx.lineTo(width-92,y-38);ctx.stroke();
+      const items=[['DISTANZ',formatNM(voyage.totalDistanceNM)],['REISEZEIT',formatDuration(voyage.durationSeconds)],['SCHIFF',voyage.metadata.vesselName||'—'],['MMSI',voyage.metadata.mmsi||'—']];
+      items.forEach(([label,value],i)=>{const x=92+i*((width-184)/4);ctx.fillStyle=muted;ctx.font='600 14px Avenir Next, sans-serif';ctx.fillText(label,x,y);ctx.fillStyle=ink;ctx.font='500 24px Avenir Next, sans-serif';ctx.fillText(value,x,y+34);});
     }
 
-    const lonStep = lonSpan / 5;
-    for (let o = minLon + lonStep; o < maxLon; o += lonStep) {
-      const p1 = project(minLat, o);
-      const p2 = project(maxLat, o);
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-
-      ctx.fillStyle = curTheme.subtext;
-      ctx.font = '11px monospace';
-      ctx.fillText(`${o.toFixed(2)}°E`, p1.x + 4, margin + mapH - 8);
-    }
-
-    ctx.setLineDash([]); // reset
-
-    // 3. Draw Track Route
-    if (points.length > 1) {
-      // Outer glow for dark themes
-      if (theme !== 'light' && theme !== 'vintage') {
-        ctx.strokeStyle = curTheme.route;
-        ctx.lineWidth = 12;
-        ctx.globalAlpha = 0.25;
-        ctx.beginPath();
-        points.forEach((p, idx) => {
-          const pt = project(p.lat, p.lon);
-          if (idx === 0) ctx.moveTo(pt.x, pt.y);
-          else ctx.lineTo(pt.x, pt.y);
-        });
-        ctx.stroke();
-        ctx.globalAlpha = 1.0;
-      }
-
-      // Main Route line
-      ctx.strokeStyle = curTheme.route;
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      points.forEach((p, idx) => {
-        const pt = project(p.lat, p.lon);
-        if (idx === 0) ctx.moveTo(pt.x, pt.y);
-        else ctx.lineTo(pt.x, pt.y);
-      });
-      ctx.stroke();
-
-      // Start Marker
-      const startPt = project(points[0].lat, points[0].lon);
-      ctx.fillStyle = '#10b981';
-      ctx.beginPath();
-      ctx.arc(startPt.x, startPt.y, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-
-      // End Marker
-      const endPt = project(points[points.length - 1].lat, points[points.length - 1].lon);
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc(endPt.x, endPt.y, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-
-      // Anchorage stop markers
-      voyage.anchorages.forEach((anc) => {
-        const aPt = project(anc.lat, anc.lon);
-        ctx.fillStyle = '#f59e0b';
-        ctx.beginPath();
-        ctx.arc(aPt.x, aPt.y, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
-      });
-    }
-
-    // 4. Nautical Coordinate Border (Alternating Black & White Bar)
-    if (showBorderScale) {
-      const bw = 12;
-      ctx.strokeStyle = curTheme.border;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(margin - bw, margin - bw, mapW + bw * 2, mapH + bw * 2);
-
-      // Corner rosettes
-      ctx.fillStyle = curTheme.border;
-      ctx.fillRect(margin - bw - 4, margin - bw - 4, 8, 8);
-      ctx.fillRect(margin + mapW + bw - 4, margin - bw - 4, 8, 8);
-      ctx.fillRect(margin - bw - 4, margin + mapH + bw - 4, 8, 8);
-      ctx.fillRect(margin + mapW + bw - 4, margin + mapH + bw - 4, 8, 8);
-    }
-
-    // 5. Handcrafted Nautical Compass Rose (Windrose)
-    if (showCompass) {
-      const cx = margin + mapW - 140;
-      const cy = margin + 140;
-      const radius = 65;
-
-      ctx.save();
-      ctx.translate(cx, cy);
-
-      // Outer rings
-      ctx.strokeStyle = curTheme.text;
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.arc(0, 0, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, 0, radius - 8, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Cardinal points (N, S, E, W)
-      const points8 = [
-        { deg: 0, text: 'N' },
-        { deg: 90, text: 'E' },
-        { deg: 180, text: 'S' },
-        { deg: 270, text: 'W' },
-      ];
-
-      points8.forEach(({ deg, text }) => {
-        ctx.save();
-        ctx.rotate((deg * Math.PI) / 180);
-
-        // Arrow point
-        ctx.fillStyle = text === 'N' ? curTheme.border : curTheme.text;
-        ctx.beginPath();
-        ctx.moveTo(0, -radius);
-        ctx.lineTo(8, -15);
-        ctx.lineTo(0, 0);
-        ctx.fill();
-
-        ctx.fillStyle = curTheme.water;
-        ctx.beginPath();
-        ctx.moveTo(0, -radius);
-        ctx.lineTo(-8, -15);
-        ctx.lineTo(0, 0);
-        ctx.fill();
-
-        // Label
-        ctx.fillStyle = curTheme.text;
-        ctx.font = 'bold 13px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(text, 0, -radius - 8);
-
-        ctx.restore();
-      });
-
-      ctx.restore();
-      ctx.globalAlpha = 1.0;
-    }
-
-    // 6. Title Block & Voyage Statistics Badge
-    if (showMetricsCard) {
-      const cardX = margin + 30;
-      const cardY = margin + 30;
-      const cardW = 480;
-      const cardH = 220;
-
-      // Card Background
-      ctx.fillStyle = curTheme.cardBg;
-      ctx.fillRect(cardX, cardY, cardW, cardH);
-      ctx.strokeStyle = curTheme.border;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(cardX, cardY, cardW, cardH);
-
-      // Title
-      ctx.fillStyle = curTheme.text;
-      ctx.font = 'bold 24px "SF Pro Display", -apple-system, sans-serif';
-      ctx.fillText(posterTitle || 'AIS Reisekarte', cardX + 24, cardY + 45);
-
-      // Subtitle
-      ctx.fillStyle = curTheme.subtext;
-      ctx.font = '14px sans-serif';
-      ctx.fillText(subtitle, cardX + 24, cardY + 72);
-
-      // Divider line
-      ctx.strokeStyle = curTheme.grid;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(cardX + 24, cardY + 90);
-      ctx.lineTo(cardX + cardW - 24, cardY + 90);
-      ctx.stroke();
-
-      // Stats 4-Column Grid
-      const statColW = (cardW - 48) / 3;
-
-      // Distance
-      ctx.fillStyle = curTheme.subtext;
-      ctx.font = '11px sans-serif';
-      ctx.fillText('GESAMTDISTANZ', cardX + 24, cardY + 116);
-      ctx.fillStyle = curTheme.border;
-      ctx.font = 'bold 20px monospace';
-      ctx.fillText(formatNM(voyage.totalDistanceNM), cardX + 24, cardY + 142);
-
-      // Avg Speed
-      ctx.fillStyle = curTheme.subtext;
-      ctx.font = '11px sans-serif';
-      ctx.fillText('Ø GESCHWINDIGKEIT', cardX + 24 + statColW, cardY + 116);
-      ctx.fillStyle = curTheme.text;
-      ctx.font = 'bold 20px monospace';
-      ctx.fillText(formatKnots(voyage.avgSpeedKnots), cardX + 24 + statColW, cardY + 142);
-
-      // Duration
-      ctx.fillStyle = curTheme.subtext;
-      ctx.font = '11px sans-serif';
-      ctx.fillText('REISEZEIT', cardX + 24 + statColW * 2, cardY + 116);
-      ctx.fillStyle = curTheme.text;
-      ctx.font = 'bold 20px monospace';
-      ctx.fillText(formatDuration(voyage.durationSeconds), cardX + 24 + statColW * 2, cardY + 142);
-
-      // Footer note inside card
-      ctx.fillStyle = curTheme.subtext;
-      ctx.font = '11px monospace';
-      ctx.fillText(
-        `Start: ${points[0]?.timestamp.toLocaleDateString('de-DE')} • Ziel: ${points[points.length - 1]?.timestamp.toLocaleDateString('de-DE')}`,
-        cardX + 24,
-        cardY + 185
-      );
-    }
-
-    // 7. Bottom App Signature
-    ctx.fillStyle = curTheme.subtext;
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText('Erstellt mit AIS Reisekarte für macOS', width - margin - 8, height - margin + 30);
-
+    const startDate=voyage.startTime?.toLocaleDateString('de-DE')||'—', endDate=voyage.endTime?.toLocaleDateString('de-DE')||'—';
+    ctx.fillStyle=muted;ctx.font='400 14px Avenir Next, sans-serif';ctx.fillText(`${startDate}  —  ${endDate}`,92,1032);ctx.textAlign='right';ctx.fillStyle=moss;ctx.font='600 14px Avenir Next, sans-serif';ctx.fillText('NORTHERN LINES',width-92,1032);ctx.textAlign='left';
     setIsRendering(false);
   };
 
-  const handleDownloadPng = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${posterTitle.replace(/\s+/g, '_')}_Reisekarte.png`;
-    a.click();
-  };
+  const download = () => { const c=canvasRef.current;if(!c)return;const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download=`${title.replace(/\s+/g,'_')}_Northern_Lines_Route.png`;a.click(); };
+  const copy = async () => { const c=canvasRef.current;if(!c)return;try{c.toBlob(async b=>{if(!b)return;await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);setCopySuccess(true);setTimeout(()=>setCopySuccess(false),2500);});}catch{download();} };
+  const print = () => { const c=canvasRef.current;if(!c)return;const u=c.toDataURL('image/png');const w=window.open('','','width=1000,height=800');if(!w)return;w.document.write(`<html><body style="margin:0;display:flex;justify-content:center"><img src="${u}" style="max-width:100%"></body></html>`);w.document.close();setTimeout(()=>w.print(),250); };
 
-  const handleCopyImage = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    try {
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 3000);
-      });
-    } catch {
-      // Fallback
-      handleDownloadPng();
-    }
-  };
-
-  const handlePrint = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
-    const windowContent = `
-      <!DOCTYPE html>
-      <html>
-        <head><title>${posterTitle}</title></head>
-        <body style="margin:0;display:flex;justify-content:center;align-items:center;height:100vh;background:#fff;">
-          <img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;" />
-        </body>
-      </html>
-    `;
-    const printWin = window.open('', '', 'width=900,height=700');
-    if (printWin) {
-      printWin.document.open();
-      printWin.document.write(windowContent);
-      printWin.document.close();
-      printWin.focus();
-      setTimeout(() => {
-        printWin.print();
-        printWin.close();
-      }, 300);
-    }
-  };
-
-  return (
-    <div className="w-full h-full overflow-y-auto bg-slate-950 p-6 text-slate-100 select-none">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-cyan-400" />
-              <span>Nautische Reisekarte exportieren & drucken</span>
-            </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Erstelle aus den AIS-Tracker-Koordinaten eine hochauflösende, rahmenfertige Reisekarte oder Urkunde.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCopyImage}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
-            >
-              {copySuccess ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{copySuccess ? 'Kopiert!' : 'Kopieren'}</span>
-            </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
-            >
-              <Printer className="w-4 h-4 text-amber-400" />
-              <span>Drucken / PDF</span>
-            </button>
-            <button
-              onClick={handleDownloadPng}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg shadow-md transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              <span>PNG Herunterladen (High-Res)</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Customization Toolbar & Layout Options */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider">
-            <Sliders className="w-4 h-4" />
-            <span>Karten-Design & Beschriftung anpassen</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-            {/* Title */}
-            <div>
-              <label className="block text-slate-400 mb-1">Kartentitel</label>
-              <input
-                type="text"
-                value={posterTitle}
-                onChange={(e) => setPosterTitle(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-cyan-500"
-              />
-            </div>
-
-            {/* Subtitle */}
-            <div>
-              <label className="block text-slate-400 mb-1">Untertitel & Schiffsname</label>
-              <input
-                type="text"
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-cyan-500"
-              />
-            </div>
-
-            {/* Theme Selector */}
-            <div>
-              <label className="block text-slate-400 mb-1">Farbschema</label>
-              <select
-                value={theme}
-                onChange={(e) => setTheme(e.target.value as any)}
-                className="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-cyan-500"
-              >
-                <option value="navy">Klassisch Marineblau (Navy)</option>
-                <option value="dark">Nacht-Navigation (Tiefschwarz)</option>
-                <option value="light">Seekarte Hell (Klassisch)</option>
-                <option value="vintage">Vintage Pergament (Antik)</option>
-              </select>
-            </div>
-
-            {/* Toggles */}
-            <div>
-              <label className="block text-slate-400 mb-1">Kartenelemente</label>
-              <div className="flex items-center gap-4 pt-1">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showCompass}
-                    onChange={(e) => setShowCompass(e.target.checked)}
-                    className="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0"
-                  />
-                  <span className="text-slate-300">Kompassrose</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showMetricsCard}
-                    onChange={(e) => setShowMetricsCard(e.target.checked)}
-                    className="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0"
-                  />
-                  <span className="text-slate-300">Infokasten</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Canvas Preview */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-2xl flex flex-col items-center">
-          <div className="w-full flex items-center justify-between text-xs text-slate-400 mb-3 px-2">
-            <span>Druckvorschau (1600 × 1100 px Render-Canvas)</span>
-            <span>{isRendering ? 'Wird gerendert...' : 'Bereit zum Drucken'}</span>
-          </div>
-
-          <div className="w-full overflow-hidden rounded-lg border border-slate-700/80 shadow-2xl bg-slate-950 flex items-center justify-center p-2">
-            <canvas
-              ref={canvasRef}
-              className="max-w-full h-auto rounded shadow-lg"
-              style={{ maxHeight: '68vh' }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="w-full h-full overflow-y-auto bg-[#f4f1e9] p-6 text-[#24302e] select-none"><div className="max-w-6xl mx-auto space-y-5">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div><div className="text-[10px] uppercase tracking-[.22em] text-[#6f7c68] font-semibold">Northern Lines · Editorial Export</div><h1 className="text-xl font-semibold tracking-tight flex items-center gap-2 mt-1"><Route className="w-5 h-5 text-[#456f75]"/>Route Sheet</h1><p className="text-xs text-[#66716d] mt-1">Eine ruhige Reisegrafik für Northern Lines – keine simulierte Seekarte.</p></div><div className="flex gap-2"><button onClick={copy} className="nl-button rounded-full px-3 py-2 text-xs flex gap-1.5 items-center">{copySuccess?<Check className="w-4 h-4 text-[#6f7c68]"/>:<Copy className="w-4 h-4"/>}{copySuccess?'Kopiert':'Kopieren'}</button><button onClick={print} className="nl-button rounded-full px-3 py-2 text-xs flex gap-1.5 items-center"><Printer className="w-4 h-4 text-[#b59668]"/>Drucken / PDF</button><button onClick={download} className="rounded-full px-4 py-2 text-xs flex gap-1.5 items-center bg-[#31575d] text-[#fffdf8]"><Download className="w-4 h-4"/>PNG exportieren</button></div></div>
+    <div className="nl-panel rounded-2xl p-5 shadow-sm"><div className="flex items-center gap-2 text-[10px] uppercase tracking-[.18em] text-[#6f7c68] font-semibold mb-4"><Sliders className="w-4 h-4"/>Beschriftung</div><div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 text-xs"><label className="text-[#66716d]">Titel<input value={title} onChange={e=>setTitle(e.target.value)} className="block mt-1 w-full rounded-lg border border-[#d8d2c5] bg-[#fffdf8] px-3 py-2 text-[#24302e] outline-none focus:border-[#456f75]"/></label><label className="text-[#66716d]">Unterzeile<input value={subtitle} onChange={e=>setSubtitle(e.target.value)} className="block mt-1 w-full rounded-lg border border-[#d8d2c5] bg-[#fffdf8] px-3 py-2 text-[#24302e] outline-none focus:border-[#456f75]"/></label><label className="flex items-end gap-2 pb-2 text-[#66716d]"><input type="checkbox" checked={showMetrics} onChange={e=>setShowMetrics(e.target.checked)} className="accent-[#456f75]"/>Reisedaten zeigen</label></div></div>
+    <div className="nl-panel rounded-2xl p-4 shadow-sm"><div className="flex justify-between text-[10px] text-[#66716d] mb-3 px-1"><span>Editorial Route Sheet · 1600 × 1100 px</span><span>{isRendering?'Wird gerendert …':'Vorschau'}</span></div><div className="rounded-xl border border-[#d8d2c5] bg-[#ebe6da] p-3 flex justify-center"><canvas ref={canvasRef} className="max-w-full h-auto shadow-[0_10px_30px_rgba(36,48,46,.12)]" style={{maxHeight:'68vh'}}/></div></div>
+  </div></div>;
 };
