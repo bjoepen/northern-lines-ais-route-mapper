@@ -24,9 +24,9 @@ export interface AisPoint {
   timestamp: Date;
   lat: number;
   lon: number;
-  sog?: number; // Speed Over Ground in knots
-  cog?: number; // Course Over Ground in degrees (0-360)
-  heading?: number; // True heading
+  sog?: number;
+  cog?: number;
+  heading?: number;
   navStatus?: string;
   mmsi?: string;
   layer: TrackLayer;
@@ -90,6 +90,7 @@ export interface VoyageData {
   };
 }
 
-export type MapStyleId = 'nautical' | 'osm' | 'satellite' | 'dark' | 'topo';
+/** Keyless map styles guaranteed by the Northern Lines map baseline. */
+export type MapStyleId = 'nautical' | 'osm';
 export type RouteColorMode = 'speed' | 'monochrome' | 'gradient';
 export type ActiveTab = 'map' | 'logbook' | 'data' | 'export';
