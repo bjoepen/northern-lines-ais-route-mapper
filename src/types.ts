@@ -60,6 +60,60 @@ export interface ImportNormalizationSummary {
   incompleteNmeaFragments: number;
 }
 
+/** Overall verdict emitted by Northern Lines Tracker QA and consumed read-only by the Mapper. */
+export type JourneyQualityStatus = 'pass' | 'warn' | 'fail' | 'unknown';
+
+/** Known QA issue families. Unknown future codes remain representable as strings. */
+export type JourneyQualityIssueCode =
+  | 'TROLL_CROSSING'
+  | 'TRACK_GAP'
+  | 'POSITION_OUTLIER'
+  | 'IMPOSSIBLE_SPEED'
+  | 'DUPLICATE_POINT'
+  | 'OUT_OF_ORDER_TIMESTAMP'
+  | 'MMSI_MISMATCH'
+  | string;
+
+export interface JourneyQualityIssue {
+  code: JourneyQualityIssueCode;
+  severity: 'info' | 'warn' | 'fail';
+  message?: string;
+  pointId?: string;
+  fromPointId?: string;
+  toPointId?: string;
+  observedAt?: Date;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Build 004 boundary: this report is produced upstream by Tracker QA.
+ * The Route Mapper may display and gate on it, but must not recompute it.
+ */
+export interface JourneyQualityReport {
+  contractVersion: '0.4.0';
+  status: JourneyQualityStatus;
+  analyzer?: string;
+  analyzerVersion?: string;
+  analyzedAt?: Date;
+  journeyId?: string;
+  mmsi?: string;
+  pointCount?: number;
+  trollCrossings?: number;
+  gaps?: number;
+  issues: JourneyQualityIssue[];
+}
+
+export interface JourneyQualityState {
+  /** Whether a Tracker QA report accompanied this voyage. */
+  supplied: boolean;
+  /** Parsed upstream report; absent for legacy/demo/general imports. */
+  report?: JourneyQualityReport;
+  /** Editorial export should only be trusted when this is true. */
+  editorialReady: boolean;
+  /** Human-readable reason when editorialReady is false. */
+  reason?: string;
+}
+
 export interface AnchorageStop {
   id: string;
   name?: string;
@@ -89,6 +143,8 @@ export interface VoyageData {
   trackContract: TrackContractSummary;
   /** Present for text/file imports normalized by Build 003. */
   importNormalization?: ImportNormalizationSummary;
+  /** Upstream Tracker QA state. Mapper consumes this contract but never recomputes QA. */
+  journeyQuality?: JourneyQualityState;
   totalDistanceNM: number;
   avgSpeedKnots: number;
   maxSpeedKnots: number;
