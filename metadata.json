@@ -1,0 +1,6 @@
+{
+  "name": "AIS Reisekarte macOS",
+  "description": "macOS Desktop-Anwendung zum Erstellen interaktiver und exportierbarer nautischer Reisekarten aus AIS-Tracker-Koordinaten (CSV, NMEA, GPX, JSON).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
