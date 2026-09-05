@@ -48,6 +48,18 @@ export interface TrackContractSummary {
   mixedMmsi: boolean;
 }
 
+export type ImportDetectedFormat = 'nmea' | 'csv' | 'gpx' | 'json' | 'geojson' | 'mixed' | 'unknown';
+
+export interface ImportNormalizationSummary {
+  version: '0.3.0';
+  detectedFormat: ImportDetectedFormat;
+  inputRecords: number;
+  normalizedPoints: number;
+  ignoredRecords: number;
+  assembledNmeaMessages: number;
+  incompleteNmeaFragments: number;
+}
+
 export interface AnchorageStop {
   id: string;
   name?: string;
@@ -75,6 +87,8 @@ export interface VoyageData {
   /** Canonical, chronologically ordered route points used by the current UI. */
   points: AisPoint[];
   trackContract: TrackContractSummary;
+  /** Present for text/file imports normalized by Build 003. */
+  importNormalization?: ImportNormalizationSummary;
   totalDistanceNM: number;
   avgSpeedKnots: number;
   maxSpeedKnots: number;

@@ -4,12 +4,10 @@ The **Northern Lines AIS Route Mapper** turns recorded AIS/GPS voyage data into 
 
 ## Product role
 
-The Route Mapper sits between recording and editorial presentation:
-
 ```text
 AIS Journey Recorder
         ↓
-recorded observations
+recorded + QA-validated observations
         ↓
 AIS Route Mapper
         ↓
@@ -18,11 +16,12 @@ canonical / editorial route
 Northern Lines Studio
 ```
 
-The architectural ownership rule is:
+The ownership rule is:
 
 ```text
 Recorder owns observation.
-Route Mapper owns reconstruction.
+Tracker QA owns track validity.
+Route Mapper owns import normalization and reconstruction.
 Studio owns editorial presentation.
 ```
 
@@ -31,14 +30,15 @@ Studio owns editorial presentation.
 - interactive Leaflet voyage map
 - keyless OpenStreetMap base tiles
 - keyless OpenSeaMap seamark overlay
-- route playback and telemetry
-- CSV/text, single-fragment AIS NMEA, GPS RMC, GPX and JSON import
+- visible playback vessel marker and travelled-route overlay
+- CSV/text, AIS NMEA, GPS RMC, GPX, JSON and GeoJSON import
+- multi-fragment AIVDM/AIVDO assembly
+- receiver/source/synthetic timestamp provenance
 - GPX and CSV export
 - voyage metadata and logbook views
 - canvas-based route poster export
 - bundled demonstration voyages
 - Raw Track preservation and Canonical Track derivation
-- explicit timestamp and source provenance
 - MMSI ambiguity detection
 
 ## Keyless map contract
@@ -60,13 +60,11 @@ The visible map styles are intentionally limited to:
 - **Nautical** — OpenStreetMap + OpenSeaMap seamarks
 - **OpenStreetMap Standard** — OpenStreetMap only
 
-No Google Maps, Mapbox, CARTO or Esri provider is required by the baseline runtime. Additional providers may only return later as explicit optional adapters; they must never become a requirement for opening or inspecting a route.
-
-Internet access is still required to fetch online tiles. Offline/local tile support is a future desktop concern.
+No Google Maps, Mapbox, CARTO or Esri provider is required by the baseline runtime. Internet access is still required to fetch online tiles; offline/local tile support is a future desktop concern.
 
 ## Track data contract
 
-Build 002 establishes the first explicit data contract:
+Build 002 establishes:
 
 ```text
 Raw Track
@@ -78,7 +76,25 @@ Editorial Route (future)
 
 `VoyageData.rawPoints` preserves imported observations. `VoyageData.points` contains the derived canonical route currently consumed by the UI. Derived SOG/COG values are marked, timestamp trust is explicit, and mixed MMSI datasets are identified rather than silently accepted as a single-vessel truth.
 
-See [`docs/TRACK-DATA-CONTRACT.md`](docs/TRACK-DATA-CONTRACT.md) for the normative Build 002 contract.
+See [`docs/TRACK-DATA-CONTRACT.md`](docs/TRACK-DATA-CONTRACT.md).
+
+## Import normalization
+
+Build 003 moves source-format handling behind a dedicated adapter boundary:
+
+```text
+CSV / GPX / JSON / GeoJSON / NMEA
+                ↓
+        Import Normalization
+                ↓
+       normalized Raw Points
+                ↓
+        Track Data Contract
+```
+
+Multi-fragment AIS messages are assembled only when all fragments are present. Incomplete groups are recorded in the normalization summary and never guessed. Receiver timestamps remain distinguishable from timestamps embedded in the original source record.
+
+See [`docs/IMPORT-NORMALIZATION.md`](docs/IMPORT-NORMALIZATION.md).
 
 ## Development
 
@@ -87,41 +103,26 @@ Requirements:
 - Node.js
 - npm
 
-Install dependencies:
-
 ```bash
 npm install
-```
-
-Start the development server:
-
-```bash
 npm run dev
-```
-
-TypeScript quality gate:
-
-```bash
 npm run lint
-```
-
-Production build:
-
-```bash
 npm run build
 ```
 
 ## Build roadmap
 
-- **001 — Product Baseline:** complete. AI Studio/Gemini coupling removed; Northern Lines identity established.
-- **002 — Track Data Contract:** complete. Raw/canonical separation, timestamp provenance and MMSI binding established.
-- **002A — Keyless Map Baseline:** current build. OSM/OpenSeaMap-only guaranteed map runtime with no API-key requirement.
-- **003 — Import Normalization:** normalize supported source formats into the track contract, including robust NMEA fragment handling.
-- **004 — Track Quality:** gaps, duplicates, impossible movement, outliers and land-crossing detection (Troll Crossing).
-- **005 — Journey Import Contract:** direct interoperability with Northern Lines Cartography/Journey Recorder output.
+- **001 — Product Baseline:** complete.
+- **002 — Track Data Contract:** complete.
+- **002A — Keyless Map Baseline:** complete.
+- **002B — Playback Marker:** complete.
+- **003 — Import Normalization:** current build; dedicated format adapters and NMEA fragment assembly.
+- **004 — Journey Quality Contract:** consume Tracker QA results; do not duplicate Troll/land-mask analysis in the Mapper.
+- **005 — Journey Recorder Import:** direct interoperability with Northern Lines Cartography/Journey Recorder output.
+- **005A — Northern Lines Visual Language:** typography, tokens, chrome and control hierarchy without turning the Mapper into a Studio clone.
 - **006 — Editorial Route:** controlled simplification and route assets for Northern Lines Studio.
 - **007 — Tauri v2 Desktop Host:** package the hardened mapper as a native Northern Lines desktop application.
 
 ## Status
 
-Build 002A is ready for local TypeScript, production-build and map-runtime gates before merge to `main`.
+Build 003 is ready for local TypeScript, production-build and import regression gates before merge to `main`.
