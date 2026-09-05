@@ -29,7 +29,8 @@ Studio owns editorial presentation.
 ## Current capabilities
 
 - interactive Leaflet voyage map
-- nautical seamarks via OpenSeaMap
+- keyless OpenStreetMap base tiles
+- keyless OpenSeaMap seamark overlay
 - route playback and telemetry
 - CSV/text, single-fragment AIS NMEA, GPS RMC, GPX and JSON import
 - GPX and CSV export
@@ -39,6 +40,29 @@ Studio owns editorial presentation.
 - Raw Track preservation and Canonical Track derivation
 - explicit timestamp and source provenance
 - MMSI ambiguity detection
+
+## Keyless map contract
+
+Build 002A establishes the guaranteed baseline map path:
+
+```text
+OpenStreetMap base map
+        +
+OpenSeaMap seamarks
+        ↓
+no API key
+no map account
+no cloud secret
+```
+
+The visible map styles are intentionally limited to:
+
+- **Nautical** — OpenStreetMap + OpenSeaMap seamarks
+- **OpenStreetMap Standard** — OpenStreetMap only
+
+No Google Maps, Mapbox, CARTO or Esri provider is required by the baseline runtime. Additional providers may only return later as explicit optional adapters; they must never become a requirement for opening or inspecting a route.
+
+Internet access is still required to fetch online tiles. Offline/local tile support is a future desktop concern.
 
 ## Track data contract
 
@@ -90,12 +114,14 @@ npm run build
 ## Build roadmap
 
 - **001 — Product Baseline:** complete. AI Studio/Gemini coupling removed; Northern Lines identity established.
-- **002 — Track Data Contract:** implemented on the current build branch; raw/canonical separation, timestamp provenance and MMSI binding.
+- **002 — Track Data Contract:** complete. Raw/canonical separation, timestamp provenance and MMSI binding established.
+- **002A — Keyless Map Baseline:** current build. OSM/OpenSeaMap-only guaranteed map runtime with no API-key requirement.
 - **003 — Import Normalization:** normalize supported source formats into the track contract, including robust NMEA fragment handling.
 - **004 — Track Quality:** gaps, duplicates, impossible movement, outliers and land-crossing detection (Troll Crossing).
 - **005 — Journey Import Contract:** direct interoperability with Northern Lines Cartography/Journey Recorder output.
 - **006 — Editorial Route:** controlled simplification and route assets for Northern Lines Studio.
+- **007 — Tauri v2 Desktop Host:** package the hardened mapper as a native Northern Lines desktop application.
 
 ## Status
 
-Build 002 is ready for local TypeScript, production-build and real-world regression gates before merge to `main`.
+Build 002A is ready for local TypeScript, production-build and map-runtime gates before merge to `main`.
