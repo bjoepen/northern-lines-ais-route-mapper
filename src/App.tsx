@@ -40,7 +40,7 @@ export default function App() {
 
   return <div className="nl-app w-screen h-screen flex flex-col overflow-hidden select-none">
     <MacTitleBar title={voyage.metadata.title} vesselName={voyage.metadata.vesselName} activeTab={activeTab} onTabChange={setActiveTab} mapStyle={mapStyle} onMapStyleChange={setMapStyle} showSeaMarks={showSeaMarks} onToggleSeaMarks={() => setShowSeaMarks(!showSeaMarks)} onLoadPreset={handleLoadPreset} onNewTrip={handleNewTrip}/>
-    <main className="flex-1 relative overflow-hidden">
+    <main className={`flex-1 relative overflow-hidden ${activeTab === 'map' ? '' : 'nl-workspace'}`}>
       {activeTab === 'map' && <div className="w-full h-full relative"><VoyageMap voyage={voyage} activePointIndex={activePointIndex} onPointSelect={setActivePointIndex} mapStyle={mapStyle} showSeaMarks={showSeaMarks} routeColorMode={routeColorMode} onToggleRouteColorMode={() => setRouteColorMode(routeColorMode === 'speed' ? 'monochrome' : 'speed')}/><PlaybackController points={voyage.points} currentIndex={activePointIndex} onIndexChange={setActivePointIndex} isPlaying={isPlaying} onTogglePlay={() => setIsPlaying(!isPlaying)} playbackSpeed={playbackSpeed} onSpeedChange={setPlaybackSpeed}/></div>}
       {activeTab === 'logbook' && <LogbookView voyage={voyage} onUpdateMetadata={handleUpdateMetadata} onSelectAnchorage={handleSelectAnchorage}/>} 
       {activeTab === 'data' && <AisDataView voyage={voyage} onImportNewData={handleImportNewData}/>} 
