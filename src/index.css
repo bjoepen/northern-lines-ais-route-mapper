@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+:root {
+  --nl-paper: #f4f1e9;
+  --nl-paper-strong: #ebe6da;
+  --nl-ink: #24302e;
+  --nl-ink-soft: #66716d;
+  --nl-line: #d8d2c5;
+  --nl-sea: #456f75;
+  --nl-sea-deep: #31575d;
+  --nl-moss: #6f7c68;
+  --nl-sand: #b59668;
+  --nl-white: #fffdf8;
+  --nl-shadow: 0 12px 32px rgba(36, 48, 46, 0.12);
+  font-family: Avenir Next, Avenir, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--nl-ink);
+  background: var(--nl-paper);
+}
+
+html, body, #root { width: 100%; height: 100%; margin: 0; }
+body { background: var(--nl-paper); }
+button, input, select, textarea { font: inherit; }
+
+.nl-app { background: var(--nl-paper); color: var(--nl-ink); }
+.nl-chrome { background: rgba(255, 253, 248, .96); border-color: var(--nl-line); color: var(--nl-ink); }
+.nl-panel { background: rgba(255, 253, 248, .94); border: 1px solid var(--nl-line); box-shadow: var(--nl-shadow); color: var(--nl-ink); }
+.nl-muted { color: var(--nl-ink-soft); }
+.nl-accent { color: var(--nl-sea-deep); }
+.nl-button { background: var(--nl-white); border: 1px solid var(--nl-line); color: var(--nl-ink); }
+.nl-button:hover { background: var(--nl-paper-strong); }
+.nl-button-active { background: var(--nl-sea-deep); border-color: var(--nl-sea-deep); color: var(--nl-white); }
+
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+  font-family: Avenir Next, Avenir, Inter, ui-sans-serif, system-ui, sans-serif !important;
+}
