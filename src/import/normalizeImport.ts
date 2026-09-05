@@ -417,11 +417,16 @@ export function parseGpx(content: string): AisPoint[] {
   return points;
 }
 
+function isAisPoint(point: AisPoint | null): point is AisPoint {
+  return point !== null;
+}
+
 function parseJson(content: string): { points: AisPoint[]; format: ImportDetectedFormat } {
   const json = JSON.parse(content);
   const epoch = Date.now();
+
   if (Array.isArray(json)) {
-    const points = json.map((item, index) => {
+    const points = json.map<AisPoint | null>((item, index) => {
       const lat = Number(item.lat ?? item.latitude);
       const lon = Number(item.lon ?? item.lng ?? item.longitude);
       if (!validCoordinate(lat, lon)) return null;
@@ -441,15 +446,15 @@ function parseJson(content: string): { points: AisPoint[]; format: ImportDetecte
         heading: numberValue(item.heading),
         mmsi: item.mmsi !== undefined ? String(item.mmsi) : undefined,
         navStatus: item.navStatus ?? item.status,
-        layer: 'raw' as const,
+        layer: 'raw',
         provenance: makeProvenance('json', hasTime ? 'source' : 'synthetic', index, `json:${index}`),
       };
-    }).filter((point): point is AisPoint => point !== null);
+    }).filter(isAisPoint);
     return { points, format: 'json' };
   }
 
   if (Array.isArray(json?.features)) {
-    const points = json.features.map((feature: any, index: number) => {
+    const points = json.features.map<AisPoint | null>((feature: any, index: number) => {
       if (feature.geometry?.type !== 'Point' || !Array.isArray(feature.geometry.coordinates)) return null;
       const lon = Number(feature.geometry.coordinates[0]);
       const lat = Number(feature.geometry.coordinates[1]);
@@ -466,12 +471,13 @@ function parseJson(content: string): { points: AisPoint[]; format: ImportDetecte
         cog: Number.isFinite(Number(feature.properties?.cog ?? feature.properties?.course)) ? Number(feature.properties?.cog ?? feature.properties?.course) : undefined,
         mmsi: feature.properties?.mmsi !== undefined ? String(feature.properties.mmsi) : undefined,
         navStatus: feature.properties?.navStatus ?? feature.properties?.status,
-        layer: 'raw' as const,
+        layer: 'raw',
         provenance: makeProvenance('geojson', hasTime ? 'source' : 'synthetic', index, `geojson:${index}`),
       };
-    }).filter((point: AisPoint | null): point is AisPoint => point !== null);
+    }).filter(isAisPoint);
     return { points, format: 'geojson' };
   }
+
   return { points: [], format: 'unknown' };
 }
 
