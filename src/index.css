@@ -30,6 +30,70 @@ button, input, select, textarea { font: inherit; }
 .nl-button:hover { background: var(--nl-paper-strong); }
 .nl-button-active { background: var(--nl-sea-deep); border-color: var(--nl-sea-deep); color: var(--nl-white); }
 
+/* Build 005A compatibility layer: the three secondary prototype views still carry
+   legacy Tailwind utility names. Scope their visual translation here so map chrome
+   and Leaflet overlays remain untouched while functionality stays unchanged. */
+.nl-workspace { background: var(--nl-paper); color: var(--nl-ink); }
+.nl-workspace .bg-slate-950,
+.nl-workspace .bg-slate-950\/60 { background-color: var(--nl-paper) !important; }
+.nl-workspace .bg-slate-900,
+.nl-workspace .bg-slate-900\/90,
+.nl-workspace .bg-slate-900\/60 { background-color: var(--nl-white) !important; }
+.nl-workspace .bg-slate-800,
+.nl-workspace .bg-slate-800\/80,
+.nl-workspace .bg-slate-800\/30 { background-color: var(--nl-paper-strong) !important; }
+.nl-workspace .bg-slate-700 { background-color: var(--nl-line) !important; }
+
+.nl-workspace .border-slate-800,
+.nl-workspace .border-slate-800\/80,
+.nl-workspace .border-slate-700,
+.nl-workspace .border-slate-700\/80,
+.nl-workspace .border-slate-700\/70,
+.nl-workspace .border-slate-700\/60 { border-color: var(--nl-line) !important; }
+
+.nl-workspace .text-white,
+.nl-workspace .text-slate-100,
+.nl-workspace .text-slate-200,
+.nl-workspace .text-slate-300 { color: var(--nl-ink) !important; }
+.nl-workspace .text-slate-400,
+.nl-workspace .text-slate-500,
+.nl-workspace .text-slate-600 { color: var(--nl-ink-soft) !important; }
+.nl-workspace .text-cyan-300,
+.nl-workspace .text-cyan-400,
+.nl-workspace .text-cyan-500,
+.nl-workspace .text-blue-300,
+.nl-workspace .text-blue-400 { color: var(--nl-sea-deep) !important; }
+.nl-workspace .text-emerald-300,
+.nl-workspace .text-emerald-400 { color: var(--nl-moss) !important; }
+.nl-workspace .text-amber-300,
+.nl-workspace .text-amber-400 { color: #92733f !important; }
+
+.nl-workspace .bg-cyan-500,
+.nl-workspace .bg-cyan-400 { background-color: var(--nl-sea-deep) !important; color: var(--nl-white) !important; }
+.nl-workspace .bg-cyan-500\/20,
+.nl-workspace .bg-cyan-500\/10 { background-color: rgba(69, 111, 117, .10) !important; }
+.nl-workspace .border-cyan-500,
+.nl-workspace .border-cyan-500\/40,
+.nl-workspace .border-cyan-500\/30,
+.nl-workspace .border-cyan-400 { border-color: rgba(69, 111, 117, .55) !important; }
+
+.nl-workspace input,
+.nl-workspace textarea,
+.nl-workspace select { background: var(--nl-white) !important; border-color: var(--nl-line) !important; color: var(--nl-ink) !important; }
+.nl-workspace input:focus,
+.nl-workspace textarea:focus,
+.nl-workspace select:focus { border-color: var(--nl-sea) !important; outline: none; box-shadow: 0 0 0 2px rgba(69,111,117,.10); }
+.nl-workspace textarea::placeholder,
+.nl-workspace input::placeholder { color: #99978f !important; }
+
+.nl-workspace table { background: var(--nl-white); color: var(--nl-ink); }
+.nl-workspace thead { background: var(--nl-paper-strong) !important; color: var(--nl-ink-soft) !important; }
+.nl-workspace tbody { border-color: var(--nl-line) !important; }
+.nl-workspace tbody tr:hover { background: rgba(235, 230, 218, .55) !important; }
+.nl-workspace .shadow-lg,
+.nl-workspace .shadow-xl,
+.nl-workspace .shadow-2xl { box-shadow: var(--nl-shadow) !important; }
+
 .leaflet-control-attribution,
 .leaflet-control-scale-line {
   font-family: Avenir Next, Avenir, Inter, ui-sans-serif, system-ui, sans-serif !important;
