@@ -1,301 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapStyleId, RouteColorMode, VoyageData } from '../types';
-import {
-  formatNauticalCoordinate,
-  formatKnots,
-  formatDegrees,
-  formatNM,
-  getSpeedColor,
-} from '../utils/geoUtils';
+import { formatNauticalCoordinate, formatKnots, formatDegrees, formatNM, getSpeedColor } from '../utils/geoUtils';
 import { Compass, ZoomIn, ZoomOut, LocateFixed, Ship } from 'lucide-react';
 
-interface VoyageMapProps {
-  voyage: VoyageData;
-  activePointIndex: number;
-  onPointSelect: (index: number) => void;
-  mapStyle: MapStyleId;
-  showSeaMarks: boolean;
-  routeColorMode: RouteColorMode;
-  onToggleRouteColorMode: () => void;
-}
+interface VoyageMapProps { voyage: VoyageData; activePointIndex: number; onPointSelect: (index: number) => void; mapStyle: MapStyleId; showSeaMarks: boolean; routeColorMode: RouteColorMode; onToggleRouteColorMode: () => void; }
 
-export const VoyageMap: React.FC<VoyageMapProps> = ({
-  voyage,
-  activePointIndex,
-  onPointSelect,
-  mapStyle,
-  showSeaMarks,
-  routeColorMode,
-  onToggleRouteColorMode,
-}) => {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const baseTileLayerRef = useRef<L.TileLayer | null>(null);
-  const seaMarksLayerRef = useRef<L.TileLayer | null>(null);
-  const routeLayersRef = useRef<L.LayerGroup | null>(null);
-  const playbackLayersRef = useRef<L.LayerGroup | null>(null);
-  const vesselMarkerRef = useRef<L.Marker | null>(null);
-  const progressLineRef = useRef<L.Polyline | null>(null);
+export const VoyageMap: React.FC<VoyageMapProps> = ({ voyage, activePointIndex, onPointSelect, mapStyle, showSeaMarks, routeColorMode, onToggleRouteColorMode }) => {
+  const mapContainerRef=useRef<HTMLDivElement>(null), mapInstanceRef=useRef<L.Map|null>(null), baseTileLayerRef=useRef<L.TileLayer|null>(null), seaMarksLayerRef=useRef<L.TileLayer|null>(null), routeLayersRef=useRef<L.LayerGroup|null>(null), playbackLayersRef=useRef<L.LayerGroup|null>(null), vesselMarkerRef=useRef<L.Marker|null>(null), progressLineRef=useRef<L.Polyline|null>(null);
+  const [cursorPos,setCursorPos]=useState<{lat:number;lon:number}|null>(null); const points=voyage.points; const currentPoint=points[activePointIndex]||points[0];
 
-  const [cursorPos, setCursorPos] = useState<{ lat: number; lon: number } | null>(null);
+  useEffect(()=>{if(!mapContainerRef.current||mapInstanceRef.current)return;const map=L.map(mapContainerRef.current,{center:[points[0]?.lat||54.428,points[0]?.lon||10.169],zoom:9,zoomControl:false,attributionControl:true});map.createPane('playback');const pane=map.getPane('playback');if(pane){pane.style.zIndex='680';pane.style.pointerEvents='none';}L.control.scale({imperial:false,metric:true,position:'bottomleft'}).addTo(map);map.on('mousemove',(e:L.LeafletMouseEvent)=>setCursorPos({lat:e.latlng.lat,lon:e.latlng.lng}));mapInstanceRef.current=map;routeLayersRef.current=L.layerGroup().addTo(map);playbackLayersRef.current=L.layerGroup().addTo(map);if(points.length>1)map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lon] as [number,number])),{padding:[50,50]});return()=>{map.remove();mapInstanceRef.current=null;vesselMarkerRef.current=null;progressLineRef.current=null;};},[]);
 
-  const points = voyage.points;
-  const currentPoint = points[activePointIndex] || points[0];
+  useEffect(()=>{const map=mapInstanceRef.current;if(!map)return;if(baseTileLayerRef.current)map.removeLayer(baseTileLayerRef.current);baseTileLayerRef.current=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);const enabled=mapStyle==='nautical'&&showSeaMarks;if(enabled){if(!seaMarksLayerRef.current)seaMarksLayerRef.current=L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',{maxZoom:18,opacity:.95,attribution:'Map data &copy; OpenSeaMap contributors'});seaMarksLayerRef.current.addTo(map);}else if(seaMarksLayerRef.current&&map.hasLayer(seaMarksLayerRef.current))map.removeLayer(seaMarksLayerRef.current);},[mapStyle,showSeaMarks]);
 
-  useEffect(() => {
-    if (!mapContainerRef.current || mapInstanceRef.current) return;
+  useEffect(()=>{const group=routeLayersRef.current;if(!group)return;group.clearLayers();if(points.length<2)return;if(routeColorMode==='speed'){for(let i=0;i<points.length-1;i++){const p1=points[i],p2=points[i+1];const segment=L.polyline([[p1.lat,p1.lon],[p2.lat,p2.lon]],{color:getSpeedColor(p1.sog),weight:4,opacity:.9,lineCap:'round',lineJoin:'round'});const idx=i;segment.on('click',()=>onPointSelect(idx));group.addLayer(segment);}}else L.polyline(points.map(p=>[p.lat,p.lon] as [number,number]),{color:'#456f75',weight:4,opacity:.9}).addTo(group);
+    const start=points[0],end=points[points.length-1];const mk=(bg:string,emoji:string,size=32)=>L.divIcon({className:'',html:`<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};border:2px solid #fffdf8;box-shadow:0 2px 8px rgba(36,48,46,.35);display:flex;align-items:center;justify-content:center;font-size:13px">${emoji}</div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});const sm=L.marker([start.lat,start.lon],{icon:mk('#6f7c68','⚓')});sm.bindPopup(`<strong>Törn-Start</strong><br>${start.timestamp.toLocaleString('de-DE')}<br>${formatNauticalCoordinate(start.lat,start.lon)}`);group.addLayer(sm);const em=L.marker([end.lat,end.lon],{icon:mk('#b59668','●')});em.bindPopup(`<strong>Törn-Ziel</strong><br>${formatNM(voyage.totalDistanceNM)}<br>${end.timestamp.toLocaleString('de-DE')}`);group.addLayer(em);voyage.anchorages.forEach(a=>{const m=L.marker([a.lat,a.lon],{icon:mk('#b59668','⚓',24)});m.bindPopup(`<strong>${a.name}</strong><br>Dauer: ${Math.round(a.durationMinutes/60)}h ${a.durationMinutes%60}m`);group.addLayer(m);});},[points,routeColorMode,voyage,onPointSelect]);
 
-    const initialLat = points[0]?.lat || 54.428;
-    const initialLon = points[0]?.lon || 10.169;
+  useEffect(()=>{const group=playbackLayersRef.current;if(!group||!currentPoint)return;const heading=Number.isFinite(currentPoint.cog)?currentPoint.cog!:Number.isFinite(currentPoint.heading)?currentPoint.heading!:0;const html=`<div style="width:48px;height:48px;position:relative;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 4px rgba(36,48,46,.45))"><div style="position:absolute;width:30px;height:30px;border-radius:50%;background:rgba(69,111,117,.18);border:2px solid #fffdf8;box-shadow:0 0 0 5px rgba(69,111,117,.20)"></div><div style="position:absolute;width:7px;height:7px;border-radius:50%;background:#fffdf8;box-shadow:0 0 0 3px #31575d"></div><svg width="34" height="34" viewBox="0 0 34 34" style="position:absolute;transform:rotate(${heading}deg);transition:transform .18s linear"><path d="M17 2 L26 29 L17 24 L8 29 Z" fill="#456f75" stroke="#fffdf8" stroke-width="2.4" stroke-linejoin="round"/></svg></div>`;const icon=L.divIcon({className:'',html,iconSize:[48,48],iconAnchor:[24,24]});if(!vesselMarkerRef.current){vesselMarkerRef.current=L.marker([currentPoint.lat,currentPoint.lon],{icon,pane:'playback',interactive:false,keyboard:false,zIndexOffset:2000});group.addLayer(vesselMarkerRef.current);}else{vesselMarkerRef.current.setLatLng([currentPoint.lat,currentPoint.lon]);vesselMarkerRef.current.setIcon(icon);}const travelled=points.slice(0,Math.min(activePointIndex+1,points.length)).map(p=>[p.lat,p.lon] as [number,number]);if(travelled.length>=2){if(!progressLineRef.current){progressLineRef.current=L.polyline(travelled,{pane:'playback',color:'#fffdf8',weight:2,opacity:.8,dashArray:'5 7',interactive:false});group.addLayer(progressLineRef.current);}else progressLineRef.current.setLatLngs(travelled);}else if(progressLineRef.current){group.removeLayer(progressLineRef.current);progressLineRef.current=null;}},[currentPoint,activePointIndex,points]);
 
-    const map = L.map(mapContainerRef.current, {
-      center: [initialLat, initialLon],
-      zoom: 9,
-      zoomControl: false,
-      attributionControl: true,
-    });
+  const fit=()=>{const m=mapInstanceRef.current;if(m&&points.length)m.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lon] as [number,number])),{padding:[60,60]});};const center=()=>{const m=mapInstanceRef.current;if(m&&currentPoint)m.panTo([currentPoint.lat,currentPoint.lon],{animate:true});};
 
-    map.createPane('playback');
-    const playbackPane = map.getPane('playback');
-    if (playbackPane) {
-      playbackPane.style.zIndex = '680';
-      playbackPane.style.pointerEvents = 'none';
-    }
-
-    L.control.scale({ imperial: false, metric: true, position: 'bottomleft' }).addTo(map);
-
-    map.on('mousemove', (e: L.LeafletMouseEvent) => {
-      setCursorPos({ lat: e.latlng.lat, lon: e.latlng.lng });
-    });
-
-    mapInstanceRef.current = map;
-    routeLayersRef.current = L.layerGroup().addTo(map);
-    playbackLayersRef.current = L.layerGroup().addTo(map);
-
-    if (points.length > 1) {
-      const latLngs = points.map((p) => [p.lat, p.lon] as [number, number]);
-      map.fitBounds(L.latLngBounds(latLngs), { padding: [50, 50] });
-    }
-
-    return () => {
-      map.remove();
-      mapInstanceRef.current = null;
-      vesselMarkerRef.current = null;
-      progressLineRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    if (baseTileLayerRef.current) map.removeLayer(baseTileLayerRef.current);
-
-    baseTileLayerRef.current = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
-
-    const seamarksEnabled = mapStyle === 'nautical' && showSeaMarks;
-    if (seamarksEnabled) {
-      if (!seaMarksLayerRef.current) {
-        seaMarksLayerRef.current = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
-          maxZoom: 18,
-          opacity: 0.95,
-          attribution: 'Map data &copy; OpenSeaMap contributors',
-        });
-      }
-      seaMarksLayerRef.current.addTo(map);
-    } else if (seaMarksLayerRef.current && map.hasLayer(seaMarksLayerRef.current)) {
-      map.removeLayer(seaMarksLayerRef.current);
-    }
-  }, [mapStyle, showSeaMarks]);
-
-  useEffect(() => {
-    const routeGroup = routeLayersRef.current;
-    if (!routeGroup) return;
-
-    routeGroup.clearLayers();
-    if (points.length < 2) return;
-
-    if (routeColorMode === 'speed') {
-      for (let i = 0; i < points.length - 1; i++) {
-        const p1 = points[i];
-        const p2 = points[i + 1];
-        const segment = L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {
-          color: getSpeedColor(p1.sog),
-          weight: 4,
-          opacity: 0.9,
-          lineCap: 'round',
-          lineJoin: 'round',
-        });
-        const segmentIdx = i;
-        segment.on('click', () => onPointSelect(segmentIdx));
-        routeGroup.addLayer(segment);
-      }
-    } else {
-      L.polyline(points.map((p) => [p.lat, p.lon] as [number, number]), {
-        color: '#06b6d4',
-        weight: 4,
-        opacity: 0.85,
-      }).addTo(routeGroup);
-    }
-
-    const startPt = points[0];
-    const startIcon = L.divIcon({
-      className: 'start-marker',
-      html: '<div style="width:32px;height:32px;border-radius:50%;background:#10b981;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:14px">⚓</div>',
-      iconSize: [32, 32], iconAnchor: [16, 16],
-    });
-    const startMarker = L.marker([startPt.lat, startPt.lon], { icon: startIcon });
-    startMarker.bindPopup(`<div style="font-size:12px;color:#0f172a"><strong>Törn-Start</strong><br>${startPt.timestamp.toLocaleDateString('de-DE')} ${startPt.timestamp.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}<br><span style="font-family:monospace">${formatNauticalCoordinate(startPt.lat, startPt.lon)}</span></div>`);
-    routeGroup.addLayer(startMarker);
-
-    const endPt = points[points.length - 1];
-    const endIcon = L.divIcon({
-      className: 'end-marker',
-      html: '<div style="width:32px;height:32px;border-radius:50%;background:#ef4444;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:14px">🏁</div>',
-      iconSize: [32, 32], iconAnchor: [16, 16],
-    });
-    const endMarker = L.marker([endPt.lat, endPt.lon], { icon: endIcon });
-    endMarker.bindPopup(`<div style="font-size:12px;color:#0f172a"><strong>Törn-Ziel / Letzter AIS Kontakt</strong><br>Distanz: <strong>${formatNM(voyage.totalDistanceNM)}</strong><br>${endPt.timestamp.toLocaleDateString('de-DE')} ${endPt.timestamp.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</div>`);
-    routeGroup.addLayer(endMarker);
-
-    voyage.anchorages.forEach((anc) => {
-      const icon = L.divIcon({
-        className: 'anchorage-marker',
-        html: '<div style="width:24px;height:24px;border-radius:50%;background:#f59e0b;border:1px solid white;box-shadow:0 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:11px">⚓</div>',
-        iconSize: [24, 24], iconAnchor: [12, 12],
-      });
-      const marker = L.marker([anc.lat, anc.lon], { icon });
-      marker.bindPopup(`<div style="font-size:12px;color:#0f172a"><strong>${anc.name}</strong><br>Dauer: ${Math.round(anc.durationMinutes / 60)}h ${anc.durationMinutes % 60}m<br><span style="font-family:monospace">${formatNauticalCoordinate(anc.lat, anc.lon)}</span></div>`);
-      routeGroup.addLayer(marker);
-    });
-  }, [points, routeColorMode, voyage, onPointSelect]);
-
-  // Build 002B: explicit playback overlay independent of Tailwind-generated marker classes.
-  useEffect(() => {
-    const playbackGroup = playbackLayersRef.current;
-    if (!playbackGroup || !currentPoint) return;
-
-    const heading = Number.isFinite(currentPoint.cog)
-      ? currentPoint.cog!
-      : Number.isFinite(currentPoint.heading)
-        ? currentPoint.heading!
-        : 0;
-
-    const vesselHtml = `
-      <div style="width:48px;height:48px;position:relative;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 4px rgba(0,0,0,.55));">
-        <div style="position:absolute;width:30px;height:30px;border-radius:50%;background:rgba(6,182,212,.20);border:2px solid rgba(255,255,255,.92);box-shadow:0 0 0 5px rgba(6,182,212,.24);"></div>
-        <div style="position:absolute;width:7px;height:7px;border-radius:50%;background:#ffffff;box-shadow:0 0 0 3px #0891b2;"></div>
-        <svg width="34" height="34" viewBox="0 0 34 34" style="position:absolute;transform:rotate(${heading}deg);transition:transform .18s linear;overflow:visible;">
-          <path d="M17 2 L26 29 L17 24 L8 29 Z" fill="#06b6d4" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"/>
-        </svg>
-      </div>`;
-
-    const vesselIcon = L.divIcon({
-      className: '',
-      html: vesselHtml,
-      iconSize: [48, 48],
-      iconAnchor: [24, 24],
-    });
-
-    if (!vesselMarkerRef.current) {
-      vesselMarkerRef.current = L.marker([currentPoint.lat, currentPoint.lon], {
-        icon: vesselIcon,
-        pane: 'playback',
-        interactive: false,
-        keyboard: false,
-        zIndexOffset: 2000,
-      });
-      playbackGroup.addLayer(vesselMarkerRef.current);
-    } else {
-      vesselMarkerRef.current.setLatLng([currentPoint.lat, currentPoint.lon]);
-      vesselMarkerRef.current.setIcon(vesselIcon);
-    }
-
-    const travelled = points
-      .slice(0, Math.min(activePointIndex + 1, points.length))
-      .map((p) => [p.lat, p.lon] as [number, number]);
-
-    if (travelled.length >= 2) {
-      if (!progressLineRef.current) {
-        progressLineRef.current = L.polyline(travelled, {
-          pane: 'playback',
-          color: '#ffffff',
-          weight: 2,
-          opacity: 0.75,
-          dashArray: '5 7',
-          interactive: false,
-        });
-        playbackGroup.addLayer(progressLineRef.current);
-      } else {
-        progressLineRef.current.setLatLngs(travelled);
-      }
-    } else if (progressLineRef.current) {
-      playbackGroup.removeLayer(progressLineRef.current);
-      progressLineRef.current = null;
-    }
-  }, [currentPoint, activePointIndex, points]);
-
-  const handleFitBounds = () => {
-    const map = mapInstanceRef.current;
-    if (!map || points.length === 0) return;
-    map.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lon] as [number, number])), { padding: [60, 60] });
-  };
-
-  const handleCenterVessel = () => {
-    const map = mapInstanceRef.current;
-    if (!map || !currentPoint) return;
-    map.panTo([currentPoint.lat, currentPoint.lon], { animate: true });
-  };
-
-  return (
-    <div className="relative w-full h-full bg-slate-950 overflow-hidden select-none">
-      <div ref={mapContainerRef} className="w-full h-full z-0" />
-
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-        <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-1 backdrop-blur-md shadow-xl flex flex-col gap-1">
-          <button onClick={() => mapInstanceRef.current?.zoomIn()} className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors" title="Vergrößern (+)"><ZoomIn className="w-4 h-4" /></button>
-          <button onClick={() => mapInstanceRef.current?.zoomOut()} className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors" title="Verkleinern (-)"><ZoomOut className="w-4 h-4" /></button>
-          <div className="h-px bg-slate-700/60 my-0.5" />
-          <button onClick={handleFitBounds} className="p-2 text-slate-300 hover:text-cyan-400 hover:bg-slate-800 rounded-md transition-colors" title="Gesamte Reiseroute anzeigen"><Compass className="w-4 h-4" /></button>
-          <button onClick={handleCenterVessel} className="p-2 text-slate-300 hover:text-cyan-400 hover:bg-slate-800 rounded-md transition-colors" title="Auf Schiffsposition springen"><LocateFixed className="w-4 h-4" /></button>
-        </div>
-        <button onClick={onToggleRouteColorMode} className="bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 backdrop-blur-md shadow-xl text-slate-300 hover:text-white hover:bg-slate-800 text-[11px] font-medium flex items-center gap-1.5 transition-colors" title="Farbmodus der AIS-Route umschalten">
-          <span>{routeColorMode === 'speed' ? 'Tempo-Farben' : 'Monochrom'}</span>
-        </button>
-      </div>
-
-      {routeColorMode === 'speed' && (
-        <div className="absolute bottom-20 left-4 z-20 bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 backdrop-blur-md shadow-xl text-[11px] text-slate-300 pointer-events-none hidden sm:block">
-          <div className="font-semibold text-slate-200 text-xs mb-1.5">AIS Geschwindigkeit (SOG)</div>
-          <div>&lt; 0.3 kn · Liegeplatz &nbsp; | &nbsp; 0.3–3 kn · Hafen &nbsp; | &nbsp; 3–6 kn · Marschfahrt &nbsp; | &nbsp; &gt; 12 kn · Schnell</div>
-        </div>
-      )}
-
-      <div className="absolute top-4 left-4 z-20 bg-slate-900/90 border border-slate-700/80 rounded-lg p-3 backdrop-blur-md shadow-xl max-w-xs">
-        <div className="flex items-center justify-between gap-2 border-b border-slate-700/70 pb-2 mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-cyan-500/20 text-cyan-400 flex items-center justify-center"><Ship className="w-3.5 h-3.5" /></div>
-            <div><div className="text-xs font-bold text-slate-100 truncate">{voyage.metadata.vesselName}</div><div className="text-[10px] text-slate-400 font-mono">MMSI: {voyage.metadata.mmsi || '--'}</div></div>
-          </div>
-          <div className="text-right"><div className="text-xs font-bold text-cyan-400">{formatNM(voyage.totalDistanceNM)}</div><div className="text-[10px] text-slate-400">Gesamtdistanz</div></div>
-        </div>
-        {currentPoint && (
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-slate-300"><span className="text-slate-400 text-[11px]">Position:</span><span className="font-mono text-cyan-300 text-[11px] font-medium">{formatNauticalCoordinate(currentPoint.lat, currentPoint.lon)}</span></div>
-            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800">
-              <div><span className="text-[10px] text-slate-400 block">SOG:</span><span className="text-xs font-bold text-emerald-400 font-mono">{formatKnots(currentPoint.sog)}</span></div>
-              <div><span className="text-[10px] text-slate-400 block">COG:</span><span className="text-xs font-bold text-amber-400 font-mono">{formatDegrees(currentPoint.cog)}</span></div>
-            </div>
-            <div className="text-[10px] text-slate-400 pt-1 flex justify-between"><span>Ab Start: {formatNM(currentPoint.distanceFromStartNM || 0)}</span><span>{currentPoint.timestamp.toLocaleTimeString('de-DE')}</span></div>
-          </div>
-        )}
-      </div>
-
-      {cursorPos && <div className="absolute bottom-2 right-4 z-20 bg-slate-900/80 border border-slate-700/60 rounded px-2 py-1 text-[11px] font-mono text-slate-400 pointer-events-none hidden md:block">Mauszeiger: {formatNauticalCoordinate(cursorPos.lat, cursorPos.lon)}</div>}
+  return <div className="relative w-full h-full overflow-hidden select-none"><div ref={mapContainerRef} className="w-full h-full z-0"/>
+    <div className="absolute top-4 right-4 z-20 flex flex-col gap-2"><div className="nl-panel rounded-xl p-1 flex flex-col gap-1 shadow-md"><button onClick={()=>mapInstanceRef.current?.zoomIn()} className="p-2 text-[#66716d] hover:text-[#24302e] hover:bg-[#ebe6da] rounded-lg"><ZoomIn className="w-4 h-4"/></button><button onClick={()=>mapInstanceRef.current?.zoomOut()} className="p-2 text-[#66716d] hover:text-[#24302e] hover:bg-[#ebe6da] rounded-lg"><ZoomOut className="w-4 h-4"/></button><div className="h-px bg-[#d8d2c5]"/><button onClick={fit} className="p-2 text-[#66716d] hover:text-[#31575d] hover:bg-[#ebe6da] rounded-lg"><Compass className="w-4 h-4"/></button><button onClick={center} className="p-2 text-[#66716d] hover:text-[#31575d] hover:bg-[#ebe6da] rounded-lg"><LocateFixed className="w-4 h-4"/></button></div><button onClick={onToggleRouteColorMode} className="nl-panel rounded-full px-3 py-1.5 text-[10px] text-[#66716d] hover:text-[#24302e] shadow-sm">{routeColorMode==='speed'?'Tempo-Farben':'Monochrom'}</button></div>
+    {routeColorMode==='speed'&&<div className="absolute bottom-20 left-4 z-20 nl-panel rounded-xl px-3 py-2 shadow-md text-[10px] text-[#66716d] pointer-events-none hidden sm:block"><div className="font-semibold text-[#24302e] mb-1">AIS Geschwindigkeit · SOG</div><div>&lt; 0.3 kn · Liegeplatz &nbsp; | &nbsp; 0.3–3 kn · Hafen &nbsp; | &nbsp; 3–6 kn · Marschfahrt &nbsp; | &nbsp; &gt; 12 kn · Schnell</div></div>}
+    <div className="absolute top-4 left-4 z-20 w-[280px] nl-panel rounded-2xl px-4 py-3 shadow-md"><div className="flex items-start justify-between gap-3 pb-2.5 border-b border-[#d8d2c5]"><div className="min-w-0"><div className="text-[9px] uppercase tracking-[.18em] text-[#6f7c68] font-semibold">Aktuelle Position</div><div className="mt-1 flex items-center gap-2"><Ship className="w-4 h-4 text-[#456f75]"/><span className="text-[13px] font-semibold truncate text-[#24302e]">{voyage.metadata.vesselName}</span></div><div className="text-[9px] text-[#8a918d] mt-0.5">MMSI {voyage.metadata.mmsi||'—'}</div></div><div className="text-right"><div className="text-[15px] font-semibold text-[#31575d]">{formatNM(voyage.totalDistanceNM)}</div><div className="text-[9px] text-[#8a918d]">Gesamtdistanz</div></div></div>
+      {currentPoint&&<><div className="py-2.5"><div className="text-[9px] uppercase tracking-[.12em] text-[#8a918d] mb-1">Koordinate</div><div className="text-[11px] font-medium text-[#31575d]">{formatNauticalCoordinate(currentPoint.lat,currentPoint.lon)}</div></div><div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-[#d8d2c5]"><div><div className="text-[9px] text-[#8a918d]">SOG</div><div className="text-[13px] font-semibold text-[#6f7c68]">{formatKnots(currentPoint.sog)}</div></div><div><div className="text-[9px] text-[#8a918d]">COG</div><div className="text-[13px] font-semibold text-[#b59668]">{formatDegrees(currentPoint.cog)}</div></div><div><div className="text-[9px] text-[#8a918d]">Ab Start</div><div className="text-[13px] font-semibold text-[#24302e]">{formatNM(currentPoint.distanceFromStartNM||0)}</div></div></div><div className="mt-2 text-[9px] text-[#8a918d] text-right">{currentPoint.timestamp.toLocaleTimeString('de-DE')}</div></>}
     </div>
-  );
+    {cursorPos&&<div className="absolute bottom-2 right-4 z-20 bg-[#fffdf8]/90 border border-[#d8d2c5] rounded-full px-2.5 py-1 text-[9px] text-[#66716d] pointer-events-none hidden md:block">{formatNauticalCoordinate(cursorPos.lat,cursorPos.lon)}</div>}
+  </div>;
 };
