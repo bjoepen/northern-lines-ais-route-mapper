@@ -454,7 +454,8 @@ function parseJson(content: string): { points: AisPoint[]; format: ImportDetecte
   }
 
   if (Array.isArray(json?.features)) {
-    const points = json.features.map<AisPoint | null>((feature: any, index: number) => {
+    const features: any[] = json.features;
+    const points = features.map((feature: any, index: number): AisPoint | null => {
       if (feature.geometry?.type !== 'Point' || !Array.isArray(feature.geometry.coordinates)) return null;
       const lon = Number(feature.geometry.coordinates[0]);
       const lat = Number(feature.geometry.coordinates[1]);
