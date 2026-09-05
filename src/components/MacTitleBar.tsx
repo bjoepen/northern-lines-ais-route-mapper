@@ -1,15 +1,15 @@
 import React from 'react';
 import { ActiveTab, MapStyleId } from '../types';
-import { 
-  Map as MapIcon, 
-  BookOpen, 
-  FileCode, 
-  Download, 
-  Ship, 
-  Layers, 
+import {
+  Map as MapIcon,
+  BookOpen,
+  FileCode,
+  Download,
+  Ship,
+  Layers,
   Compass,
   Maximize2,
-  Anchor
+  Anchor,
 } from 'lucide-react';
 import { PRESET_VOYAGES } from '../data/sampleVoyages';
 
@@ -54,7 +54,6 @@ export const MacTitleBar: React.FC<MacTitleBarProps> = ({
 
   return (
     <header className="h-12 bg-slate-900/95 border-b border-slate-700/80 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Left: macOS Traffic Lights & Presets */}
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2 mr-2">
           <button
@@ -82,7 +81,6 @@ export const MacTitleBar: React.FC<MacTitleBarProps> = ({
           </button>
         </div>
 
-        {/* Preset Selector Dropdown */}
         <div className="relative">
           <button
             id="btn-sample-voyages"
@@ -120,7 +118,6 @@ export const MacTitleBar: React.FC<MacTitleBarProps> = ({
         </div>
       </div>
 
-      {/* Center: Segmented Navigation Control */}
       <div className="flex items-center">
         <div className="bg-slate-800/90 border border-slate-700/80 p-0.5 rounded-lg flex space-x-1 shadow-inner">
           <button
@@ -177,15 +174,12 @@ export const MacTitleBar: React.FC<MacTitleBarProps> = ({
         </div>
       </div>
 
-      {/* Right: Map Layers, Trip Title & Fullscreen */}
       <div className="flex items-center space-x-3">
-        {/* Document Title Badge */}
         <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-slate-800/40 border border-slate-700/50 rounded-md text-xs text-slate-300 max-w-[200px] truncate">
           <Ship className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
           <span className="truncate font-medium">{vesselName || 'AIS Schiff'}</span>
         </div>
 
-        {/* Map Layers Dropdown */}
         <div className="relative">
           <button
             id="btn-map-layers"
@@ -200,15 +194,13 @@ export const MacTitleBar: React.FC<MacTitleBarProps> = ({
           </button>
 
           {showLayersMenu && (
-            <div className="absolute right-0 mt-1.5 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl py-1.5 z-50 text-xs">
+            <div className="absolute right-0 mt-1.5 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl py-1.5 z-50 text-xs">
               <div className="px-3 py-1 font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
-                Karten-Stil
+                Keyless Karten-Stil
               </div>
               {[
-                { id: 'nautical', label: 'Nautisch / OpenSeaMap' },
-                { id: 'satellite', label: 'Satellitenbild' },
+                { id: 'nautical', label: 'Nautisch · OSM + OpenSeaMap' },
                 { id: 'osm', label: 'OpenStreetMap Standard' },
-                { id: 'dark', label: 'Nacht-Navigation (Dark)' },
               ].map((style) => (
                 <button
                   key={style.id}
@@ -226,6 +218,10 @@ export const MacTitleBar: React.FC<MacTitleBarProps> = ({
                   {mapStyle === style.id && <span className="text-cyan-400">✓</span>}
                 </button>
               ))}
+
+              <div className="px-3 py-1.5 text-[10px] leading-relaxed text-slate-500">
+                Kein API-Key, kein Kartenkonto und kein Cloud-Secret erforderlich.
+              </div>
 
               <div className="my-1 border-t border-slate-700/60" />
 
@@ -245,7 +241,6 @@ export const MacTitleBar: React.FC<MacTitleBarProps> = ({
           )}
         </div>
 
-        {/* Fullscreen button */}
         <button
           onClick={toggleFullscreen}
           className="p-1.5 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 rounded-md transition-colors"
