@@ -1,6 +1,6 @@
 {
-  "name": "AIS Reisekarte macOS",
-  "description": "macOS Desktop-Anwendung zum Erstellen interaktiver und exportierbarer nautischer Reisekarten aus AIS-Tracker-Koordinaten (CSV, NMEA, GPX, JSON).",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "Northern Lines AIS Route Mapper",
+  "description": "Northern Lines workspace for importing, inspecting, replaying and exporting recorded AIS and GPS voyage tracks.",
+  "product": "Northern Lines",
+  "version": "0.1.0"
 }
