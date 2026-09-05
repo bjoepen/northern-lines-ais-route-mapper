@@ -26,39 +26,42 @@ Route Mapper owns reconstruction.
 Studio owns editorial presentation.
 ```
 
-Build 001 deliberately preserves the existing working map, playback, logbook, import and export prototype while removing its Google AI Studio runtime identity.
-
 ## Current capabilities
 
 - interactive Leaflet voyage map
 - nautical seamarks via OpenSeaMap
 - route playback and telemetry
-- CSV/text, NMEA, GPX and JSON import
+- CSV/text, single-fragment AIS NMEA, GPS RMC, GPX and JSON import
 - GPX and CSV export
 - voyage metadata and logbook views
 - canvas-based route poster export
 - bundled demonstration voyages
+- Raw Track preservation and Canonical Track derivation
+- explicit timestamp and source provenance
+- MMSI ambiguity detection
 
-The current import pipeline is still prototype-grade. In particular, AIS timestamp provenance, multi-fragment NMEA handling, MMSI isolation and track-quality validation are planned follow-up work.
+## Track data contract
 
-## Planned route layers
+Build 002 establishes the first explicit data contract:
 
 ```text
 Raw Track
    ↓
 Canonical Track
    ↓
-Editorial Route
+Editorial Route (future)
 ```
 
-Raw observations must remain traceable. Reconstruction and editorial simplification must never silently overwrite source observations.
+`VoyageData.rawPoints` preserves imported observations. `VoyageData.points` contains the derived canonical route currently consumed by the UI. Derived SOG/COG values are marked, timestamp trust is explicit, and mixed MMSI datasets are identified rather than silently accepted as a single-vessel truth.
+
+See [`docs/TRACK-DATA-CONTRACT.md`](docs/TRACK-DATA-CONTRACT.md) for the normative Build 002 contract.
 
 ## Development
 
 Requirements:
 
 - Node.js
-- npm (the repository currently also contains the original Bun lockfile)
+- npm
 
 Install dependencies:
 
@@ -86,13 +89,13 @@ npm run build
 
 ## Build roadmap
 
-- **001 — Product Baseline:** remove AI Studio/Gemini coupling and establish Northern Lines identity.
-- **002 — Track Data Contract:** timestamp provenance, MMSI binding, raw/canonical separation.
-- **003 — Import Normalization:** normalize supported source formats into the track contract.
+- **001 — Product Baseline:** complete. AI Studio/Gemini coupling removed; Northern Lines identity established.
+- **002 — Track Data Contract:** implemented on the current build branch; raw/canonical separation, timestamp provenance and MMSI binding.
+- **003 — Import Normalization:** normalize supported source formats into the track contract, including robust NMEA fragment handling.
 - **004 — Track Quality:** gaps, duplicates, impossible movement, outliers and land-crossing detection (Troll Crossing).
 - **005 — Journey Import Contract:** direct interoperability with Northern Lines Cartography/Journey Recorder output.
 - **006 — Editorial Route:** controlled simplification and route assets for Northern Lines Studio.
 
 ## Status
 
-Build 001 establishes the product baseline. The existing UI remains intentionally close to the successful prototype; domain hardening follows in subsequent builds.
+Build 002 is ready for local TypeScript, production-build and real-world regression gates before merge to `main`.
