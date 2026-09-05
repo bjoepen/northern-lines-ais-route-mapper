@@ -7,6 +7,8 @@ The **Northern Lines AIS Route Mapper** turns recorded AIS/GPS voyage data into 
 ```text
 AIS Journey Recorder
         ↓
+Tracker QA
+        ↓
 recorded + QA-validated observations
         ↓
 AIS Route Mapper
@@ -40,6 +42,8 @@ Studio owns editorial presentation.
 - bundled demonstration voyages
 - Raw Track preservation and Canonical Track derivation
 - MMSI ambiguity detection
+- read-only Journey QA consumption contract
+- editorial-readiness gating from upstream QA verdicts
 
 ## Keyless map contract
 
@@ -55,53 +59,33 @@ no map account
 no cloud secret
 ```
 
-The visible map styles are intentionally limited to:
-
-- **Nautical** — OpenStreetMap + OpenSeaMap seamarks
-- **OpenStreetMap Standard** — OpenStreetMap only
-
-No Google Maps, Mapbox, CARTO or Esri provider is required by the baseline runtime. Internet access is still required to fetch online tiles; offline/local tile support is a future desktop concern.
+The visible map styles are intentionally limited to **Nautical** (OSM + OpenSeaMap) and **OpenStreetMap Standard**. No Google Maps, Mapbox, CARTO or Esri provider is required by the baseline runtime.
 
 ## Track data contract
 
-Build 002 establishes:
-
-```text
-Raw Track
-   ↓
-Canonical Track
-   ↓
-Editorial Route (future)
-```
-
-`VoyageData.rawPoints` preserves imported observations. `VoyageData.points` contains the derived canonical route currently consumed by the UI. Derived SOG/COG values are marked, timestamp trust is explicit, and mixed MMSI datasets are identified rather than silently accepted as a single-vessel truth.
-
-See [`docs/TRACK-DATA-CONTRACT.md`](docs/TRACK-DATA-CONTRACT.md).
+Build 002 establishes `Raw Track → Canonical Track → Editorial Route (future)`. `VoyageData.rawPoints` preserves imported observations while `VoyageData.points` contains the derived canonical route consumed by the UI. See [`docs/TRACK-DATA-CONTRACT.md`](docs/TRACK-DATA-CONTRACT.md).
 
 ## Import normalization
 
-Build 003 moves source-format handling behind a dedicated adapter boundary:
+Build 003 moves CSV, GPX, JSON, GeoJSON and NMEA handling behind a dedicated adapter boundary. Multi-fragment AIS messages are assembled only when complete; timestamp provenance remains explicit. See [`docs/IMPORT-NORMALIZATION.md`](docs/IMPORT-NORMALIZATION.md).
+
+## Journey Quality Contract
+
+Build 004 consumes Tracker QA results without duplicating Tracker analysis:
 
 ```text
-CSV / GPX / JSON / GeoJSON / NMEA
-                ↓
-        Import Normalization
-                ↓
-       normalized Raw Points
-                ↓
-        Track Data Contract
+Tracker Quality Analyzer
+        ↓
+JourneyQualityReport
+        ↓
+Route Mapper
 ```
 
-Multi-fragment AIS messages are assembled only when all fragments are present. Incomplete groups are recorded in the normalization summary and never guessed. Receiver timestamps remain distinguishable from timestamps embedded in the original source record.
-
-See [`docs/IMPORT-NORMALIZATION.md`](docs/IMPORT-NORMALIZATION.md).
+The Mapper may display and gate on `PASS/WARN/FAIL`, but it does not run land-mask analysis or Troll Crossing detection itself. Generic imports without an upstream QA report remain inspectable but are not considered editorial-ready. See [`docs/JOURNEY-QUALITY-CONTRACT.md`](docs/JOURNEY-QUALITY-CONTRACT.md).
 
 ## Development
 
-Requirements:
-
-- Node.js
-- npm
+Requirements: Node.js and npm.
 
 ```bash
 npm install
@@ -116,8 +100,8 @@ npm run build
 - **002 — Track Data Contract:** complete.
 - **002A — Keyless Map Baseline:** complete.
 - **002B — Playback Marker:** complete.
-- **003 — Import Normalization:** current build; dedicated format adapters and NMEA fragment assembly.
-- **004 — Journey Quality Contract:** consume Tracker QA results; do not duplicate Troll/land-mask analysis in the Mapper.
+- **003 — Import Normalization:** complete; real Journey regression remains scheduled when recorder data is available.
+- **004 — Journey Quality Contract:** current build; consume Tracker QA without duplicating it.
 - **005 — Journey Recorder Import:** direct interoperability with Northern Lines Cartography/Journey Recorder output.
 - **005A — Northern Lines Visual Language:** typography, tokens, chrome and control hierarchy without turning the Mapper into a Studio clone.
 - **006 — Editorial Route:** controlled simplification and route assets for Northern Lines Studio.
@@ -125,4 +109,4 @@ npm run build
 
 ## Status
 
-Build 003 is ready for local TypeScript, production-build and import regression gates before merge to `main`.
+Build 004 defines the read-only Journey QA contract and editorial-readiness semantics. Build 005 will bind the real Recorder artifact format once available.
