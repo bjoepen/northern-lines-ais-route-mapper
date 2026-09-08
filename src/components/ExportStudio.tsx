@@ -28,6 +28,7 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ voyage }) => {
     const paper = '#f7f4ec', ink = '#24302e', muted = '#69736f', sea = '#456f75', moss = '#6f7c68', sand = '#b59668', line = '#d8d2c5', white = '#fffdf8';
     ctx.fillStyle = paper; ctx.fillRect(0, 0, width, height);
     const points = voyage.points;
+    const segments = voyage.segments?.length ? voyage.segments : [{ id: 'legacy-segment', points }];
     if (!points.length) { setIsRendering(false); return; }
 
     // Editorial masthead
@@ -54,8 +55,14 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ voyage }) => {
     for (let i=1;i<4;i++) { const y=mapY+(mapH/4)*i; ctx.beginPath(); ctx.moveTo(mapX+inner,y); ctx.lineTo(mapX+mapW-inner,y); ctx.stroke(); }
     for (let i=1;i<6;i++) { const x=mapX+(mapW/6)*i; ctx.beginPath(); ctx.moveTo(x,mapY+inner); ctx.lineTo(x,mapY+mapH-inner); ctx.stroke(); }
 
-    ctx.strokeStyle = sea; ctx.lineWidth = 7; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath();
-    points.forEach((p,i)=>{ const q=project(p.lat,p.lon); if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y); }); ctx.stroke();
+    // Build 005 invariant: every continuous segment is drawn independently. Explicit gaps stay gaps.
+    ctx.strokeStyle = sea; ctx.lineWidth = 7; ctx.lineCap='round'; ctx.lineJoin='round';
+    segments.forEach(segment => {
+      if (!segment.points.length) return;
+      ctx.beginPath();
+      segment.points.forEach((point,index)=>{ const q=project(point.lat,point.lon); if(index===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y); });
+      ctx.stroke();
+    });
 
     const start=project(points[0].lat,points[0].lon), end=project(points[points.length-1].lat,points[points.length-1].lon);
     [[start,moss],[end,sand]].forEach(([p,c])=>{ const q=p as {x:number;y:number}; ctx.fillStyle=white;ctx.beginPath();ctx.arc(q.x,q.y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle=c as string;ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);ctx.fill(); });
@@ -63,7 +70,8 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ voyage }) => {
 
     if (showMetrics) {
       const y=930; ctx.strokeStyle=line;ctx.beginPath();ctx.moveTo(92,y-38);ctx.lineTo(width-92,y-38);ctx.stroke();
-      const items=[['DISTANZ',formatNM(voyage.totalDistanceNM)],['REISEZEIT',formatDuration(voyage.durationSeconds)],['SCHIFF',voyage.metadata.vesselName||'—'],['MMSI',voyage.metadata.mmsi||'—']];
+      const timeValue=voyage.startTime&&voyage.endTime?formatDuration(voyage.durationSeconds):'—';
+      const items=[['DISTANZ',formatNM(voyage.totalDistanceNM)],['REISEZEIT',timeValue],['SCHIFF',voyage.metadata.vesselName||'—'],['GAPS',String(voyage.gaps?.length||0)]];
       items.forEach(([label,value],i)=>{const x=92+i*((width-184)/4);ctx.fillStyle=muted;ctx.font='600 14px Avenir Next, sans-serif';ctx.fillText(label,x,y);ctx.fillStyle=ink;ctx.font='500 24px Avenir Next, sans-serif';ctx.fillText(value,x,y+34);});
     }
 
@@ -77,8 +85,8 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ voyage }) => {
   const print = () => { const c=canvasRef.current;if(!c)return;const u=c.toDataURL('image/png');const w=window.open('','','width=1000,height=800');if(!w)return;w.document.write(`<html><body style="margin:0;display:flex;justify-content:center"><img src="${u}" style="max-width:100%"></body></html>`);w.document.close();setTimeout(()=>w.print(),250); };
 
   return <div className="w-full h-full overflow-y-auto bg-[#f4f1e9] p-6 text-[#24302e] select-none"><div className="max-w-6xl mx-auto space-y-5">
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div><div className="text-[10px] uppercase tracking-[.22em] text-[#6f7c68] font-semibold">Northern Lines · Editorial Export</div><h1 className="text-xl font-semibold tracking-tight flex items-center gap-2 mt-1"><Route className="w-5 h-5 text-[#456f75]"/>Route Sheet</h1><p className="text-xs text-[#66716d] mt-1">Eine ruhige Reisegrafik für Northern Lines – keine simulierte Seekarte.</p></div><div className="flex gap-2"><button onClick={copy} className="nl-button rounded-full px-3 py-2 text-xs flex gap-1.5 items-center">{copySuccess?<Check className="w-4 h-4 text-[#6f7c68]"/>:<Copy className="w-4 h-4"/>}{copySuccess?'Kopiert':'Kopieren'}</button><button onClick={print} className="nl-button rounded-full px-3 py-2 text-xs flex gap-1.5 items-center"><Printer className="w-4 h-4 text-[#b59668]"/>Drucken / PDF</button><button onClick={download} className="rounded-full px-4 py-2 text-xs flex gap-1.5 items-center bg-[#31575d] text-[#fffdf8]"><Download className="w-4 h-4"/>PNG exportieren</button></div></div>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div><div className="text-[10px] uppercase tracking-[.22em] text-[#6f7c68] font-semibold">Northern Lines · Editorial Export</div><h1 className="text-xl font-semibold tracking-tight flex items-center gap-2 mt-1"><Route className="w-5 h-5 text-[#456f75]"/>Route Sheet</h1><p className="text-xs text-[#66716d] mt-1">Eine ruhige Reisegrafik für Northern Lines – dokumentierte QA-Gaps bleiben sichtbar.</p></div><div className="flex gap-2"><button onClick={copy} className="nl-button rounded-full px-3 py-2 text-xs flex gap-1.5 items-center">{copySuccess?<Check className="w-4 h-4 text-[#6f7c68]"/>:<Copy className="w-4 h-4"/>}{copySuccess?'Kopiert':'Kopieren'}</button><button onClick={print} className="nl-button rounded-full px-3 py-2 text-xs flex gap-1.5 items-center"><Printer className="w-4 h-4 text-[#b59668]"/>Drucken / PDF</button><button onClick={download} className="rounded-full px-4 py-2 text-xs flex gap-1.5 items-center bg-[#31575d] text-[#fffdf8]"><Download className="w-4 h-4"/>PNG exportieren</button></div></div>
     <div className="nl-panel rounded-2xl p-5 shadow-sm"><div className="flex items-center gap-2 text-[10px] uppercase tracking-[.18em] text-[#6f7c68] font-semibold mb-4"><Sliders className="w-4 h-4"/>Beschriftung</div><div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 text-xs"><label className="text-[#66716d]">Titel<input value={title} onChange={e=>setTitle(e.target.value)} className="block mt-1 w-full rounded-lg border border-[#d8d2c5] bg-[#fffdf8] px-3 py-2 text-[#24302e] outline-none focus:border-[#456f75]"/></label><label className="text-[#66716d]">Unterzeile<input value={subtitle} onChange={e=>setSubtitle(e.target.value)} className="block mt-1 w-full rounded-lg border border-[#d8d2c5] bg-[#fffdf8] px-3 py-2 text-[#24302e] outline-none focus:border-[#456f75]"/></label><label className="flex items-end gap-2 pb-2 text-[#66716d]"><input type="checkbox" checked={showMetrics} onChange={e=>setShowMetrics(e.target.checked)} className="accent-[#456f75]"/>Reisedaten zeigen</label></div></div>
-    <div className="nl-panel rounded-2xl p-4 shadow-sm"><div className="flex justify-between text-[10px] text-[#66716d] mb-3 px-1"><span>Editorial Route Sheet · 1600 × 1100 px</span><span>{isRendering?'Wird gerendert …':'Vorschau'}</span></div><div className="rounded-xl border border-[#d8d2c5] bg-[#ebe6da] p-3 flex justify-center"><canvas ref={canvasRef} className="max-w-full h-auto shadow-[0_10px_30px_rgba(36,48,46,.12)]" style={{maxHeight:'68vh'}}/></div></div>
+    <div className="nl-panel rounded-2xl p-4 shadow-sm"><div className="flex justify-between text-[10px] text-[#66716d] mb-3 px-1"><span>Editorial Route Sheet · 1600 × 1100 px</span><span>{isRendering?'Wird gerendert …':`${voyage.segments?.length||1} Segmente · ${voyage.gaps?.length||0} Gaps`}</span></div><div className="rounded-xl border border-[#d8d2c5] bg-[#ebe6da] p-3 flex justify-center"><canvas ref={canvasRef} className="max-w-full h-auto shadow-[0_10px_30px_rgba(36,48,46,.12)]" style={{maxHeight:'68vh'}}/></div></div>
   </div></div>;
 };
