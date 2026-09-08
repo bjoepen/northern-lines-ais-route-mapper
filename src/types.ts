@@ -7,6 +7,7 @@ export type TrackSourceFormat =
   | 'gpx'
   | 'json'
   | 'geojson'
+  | 'northern-lines-normalized-track'
   | 'synthetic'
   | 'unknown';
 
@@ -37,6 +38,34 @@ export interface AisPoint {
   elapsedSeconds?: number;
 }
 
+/** A continuous route section. No renderer may connect two segments implicitly. */
+export interface TrackSegment {
+  id: string;
+  points: AisPoint[];
+}
+
+/** Explicit upstream discontinuity emitted by Tracker/Cartography QA. */
+export interface TrackGap {
+  id: string;
+  reason: string;
+  confidence?: string;
+  sourceSegmentIndex?: number;
+  sourceEventIndex?: number;
+  afterPointId?: string;
+  beforePointId?: string;
+}
+
+export interface NorthernLinesJourneySource {
+  schemaVersion: number;
+  journeyId: string;
+  algorithmVersion?: string;
+  sourceObservationCount?: number;
+  sourceObservationSha256?: string;
+  qualityPolicyVersion?: string;
+  qualityReportSha256?: string;
+  normalizationPolicyVersion?: string;
+}
+
 export interface TrackContractSummary {
   version: '0.2.0';
   rawPointCount: number;
@@ -48,7 +77,15 @@ export interface TrackContractSummary {
   mixedMmsi: boolean;
 }
 
-export type ImportDetectedFormat = 'nmea' | 'csv' | 'gpx' | 'json' | 'geojson' | 'mixed' | 'unknown';
+export type ImportDetectedFormat =
+  | 'nmea'
+  | 'csv'
+  | 'gpx'
+  | 'json'
+  | 'geojson'
+  | 'northern-lines-normalized-track'
+  | 'mixed'
+  | 'unknown';
 
 export interface ImportNormalizationSummary {
   version: '0.3.0';
@@ -136,12 +173,22 @@ export interface VoyageMetadata {
 
 export interface VoyageData {
   metadata: VoyageMetadata;
-  /** Immutable source observations as imported. */
+  /** Immutable source observations when the imported format actually contains them. */
   rawPoints: AisPoint[];
-  /** Canonical, chronologically ordered route points used by the current UI. */
+  /** Flat canonical index retained for current UI/playback selection. */
   points: AisPoint[];
+  /** Continuous route sections. Renderers must never bridge between them. */
+  segments?: TrackSegment[];
+  /** Explicit discontinuities supplied upstream; Mapper never invents gap geometry. */
+  gaps?: TrackGap[];
+  /** False for geometry-only review artifacts without trustworthy timestamps. */
+  playbackAvailable?: boolean;
+  /** True for GeoJSON review artifacts that contain geometry but no journey time basis. */
+  geometryOnly?: boolean;
+  /** Provenance of a native Northern Lines Normalized Track import. */
+  northernLinesSource?: NorthernLinesJourneySource;
   trackContract: TrackContractSummary;
-  /** Present for text/file imports normalized by Build 003. */
+  /** Present for text/file imports normalized by Build 003/005. */
   importNormalization?: ImportNormalizationSummary;
   /** Upstream Tracker QA state. Mapper consumes this contract but never recomputes QA. */
   journeyQuality?: JourneyQualityState;
