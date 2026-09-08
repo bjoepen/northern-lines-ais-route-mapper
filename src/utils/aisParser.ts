@@ -8,6 +8,7 @@ import {
   VoyageMetadata,
 } from '../types';
 import { normalizeImportText, parseAisCsv, parseGpx } from '../import/normalizeImport';
+import { parseNorthernLinesJourneyText } from '../import/northernLinesJourney';
 import { calculateBearing, calculateDistanceNM } from './geoUtils';
 
 export { parseAisCsv, parseGpx } from '../import/normalizeImport';
@@ -26,6 +27,9 @@ function provenance(
 }
 
 export function parseAisData(rawText: string, metadata?: Partial<VoyageMetadata>): VoyageData {
+  const northernLinesJourney = parseNorthernLinesJourneyText(rawText, metadata);
+  if (northernLinesJourney) return northernLinesJourney;
+
   const normalized = normalizeImportText(rawText);
   const voyage = processVoyagePoints(normalized.points, metadata);
   return {
@@ -71,6 +75,9 @@ export function processVoyagePoints(
       },
       rawPoints: [],
       points: [],
+      segments: [],
+      gaps: [],
+      playbackAvailable: false,
       trackContract: {
         version: '0.2.0',
         rawPointCount: 0,
@@ -186,6 +193,10 @@ export function processVoyagePoints(
     },
     rawPoints,
     points: processedPoints,
+    segments: [{ id: 'segment-1', points: processedPoints }],
+    gaps: [],
+    playbackAvailable: processedPoints.length > 1,
+    geometryOnly: false,
     trackContract: {
       version: '0.2.0',
       rawPointCount: rawPoints.length,
