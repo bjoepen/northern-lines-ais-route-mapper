@@ -2,7 +2,7 @@
 
 ## Status
 
-006A is accepted. 006B Native Project I/O is accepted locally. 006C Native Export is implemented on branch `build/006-tauri-desktop-host` and awaiting local acceptance.
+006A Tauri Host Baseline: PASS. 006B Native Project I/O: REAL-WORLD PASS. 006C Native Export: REAL-WORLD PASS. 006D Packaging & Acceptance is active on branch `build/006-tauri-desktop-host`.
 
 ## Product boundary
 
@@ -11,6 +11,8 @@ Build 006 turns the existing Northern Lines AIS Route Mapper into a native Tauri
 The existing Mapper product, cartography renderer, Editorial Cartography Visual Baseline 1 and `.nlroute` data model remain unchanged.
 
 > Output and host integration may evolve. The approved cartographic visual language does not.
+
+The native Tauri application is the production surface. Browser execution remains useful for development and fallback testing, but browser-specific download behavior is not a release gate for Build 006.
 
 ## 006A — Tauri Host Baseline
 
@@ -49,7 +51,7 @@ Implementation boundary:
 - Tauri plugins: dialog and filesystem
 - no renderer, cartography, Editorial Cartography or `.nlroute` schema changes
 
-006B local acceptance: PASS.
+006B real-world acceptance: PASS.
 
 ## 006C — Native Export
 
@@ -61,7 +63,6 @@ Contract:
 - inside Tauri, SVG and PNG export use a native macOS Save dialog
 - the user chooses destination and file name instead of the file being dropped into Downloads
 - cancelling the Save dialog produces no file and no error state
-- outside Tauri, the existing browser download fallback remains available
 - no export path is persisted as project state
 
 Implementation boundary:
@@ -71,44 +72,63 @@ Implementation boundary:
 - binary output uses the existing Tauri filesystem plugin
 - no changes to map composition, geography, typography, colors, Editorial Visual Baseline 1 or `.nlroute`
 
-## 006C acceptance
+006C real-world acceptance: PASS.
 
-Run:
+## 006D — Packaging & Acceptance
+
+Goal: close Build 006 as a native macOS product without changing Mapper semantics or the frozen Editorial Cartography visual language.
+
+Packaging scope:
+
+- final production build with `npm run tauri build`
+- application bundle at `src-tauri/target/release/bundle/macos/Northern Lines AIS Route Mapper.app`
+- install helper `scripts/install-macos-app.sh`
+- installation into `/Applications`
+- cold-start launch from the installed application
+- final smoke test of native project I/O and editorial export
+
+### 006D acceptance sequence
+
+Run from the repository root:
 
 ```bash
 npm run lint
 npm run build
-npm run tauri dev
+npm run tauri build
+chmod +x scripts/install-macos-app.sh
+./scripts/install-macos-app.sh
 ```
 
-Real-world checks in the native app:
-
-1. Open a journey and go to Export.
-2. Export SVG. A native macOS Save dialog must open.
-3. Select a custom folder and file name. The SVG must be written there and nowhere else.
-4. Export PNG 300 dpi. A native macOS Save dialog must open.
-5. Select a custom folder and file name. The PNG must be written there and keep the selected A-series dimensions/orientation.
-6. Cancel both SVG and PNG Save dialogs. No file must be created and no error alert may appear.
-7. Run the browser app with `npm run dev`; SVG/PNG must still use the existing browser download fallback.
-
-Production gate after functional PASS:
+Then close any development instance and launch the installed application:
 
 ```bash
-npm run tauri build
+open "/Applications/Northern Lines AIS Route Mapper.app"
 ```
 
-Expected result: native project I/O and native editorial export without any change to Mapper semantics or approved visual output.
+Real-world acceptance in the installed app:
 
-## Next step after 006C PASS
+1. Cold start reaches the empty Mapper state without requiring the Vite development server.
+2. The Northern Lines application icon is present in Finder/Dock.
+3. Open an existing `.nlroute` through the native Open dialog.
+4. Modify editorial content and save with `Cmd+S`; the known project path is overwritten without another dialog.
+5. Use `Shift+Cmd+S`; a native Save As dialog opens and the new path becomes the current project path.
+6. Export one SVG through the native Save dialog and verify the file opens correctly.
+7. Export one PNG 300 dpi through the native Save dialog and verify the selected A-series format and orientation.
+8. Cancel a native Open, Save As and Export dialog once; cancellation must not damage the current project or produce an error.
+9. Quit and relaunch the installed app once more; cold start must remain clean.
 
-006D — Packaging & Acceptance
+### 006D production gate
 
-Planned scope:
+After the real-world checks:
 
-- final macOS application bundle acceptance
-- clean-install / cold-start check
-- project Open / Save / Save As smoke test
-- native SVG / PNG export smoke test
-- package documentation and release readiness
+```bash
+git status
+```
 
-Finder `.nlroute` file association remains a separate follow-up unless explicitly pulled into 006D.
+Expected repository state: clean working tree. Generated Tauri build output must remain outside version control.
+
+When all checks pass, Build 006 may be marked:
+
+`BUILD 006 — TAURI DESKTOP HOST — FINAL PASS`
+
+Finder `.nlroute` file association remains explicitly out of scope for Build 006 unless separately approved.
