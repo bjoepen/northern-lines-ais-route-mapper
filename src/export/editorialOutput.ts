@@ -1,13 +1,7 @@
 export type EditorialPaperSize='A5'|'A4'|'A3'|'A2';
-
 const mm:Record<EditorialPaperSize,{w:number;h:number}>={A5:{w:148,h:210},A4:{w:210,h:297},A3:{w:297,h:420},A2:{w:420,h:594}};
 const px300:Record<EditorialPaperSize,{w:number;h:number}>={A5:{w:1748,h:2480},A4:{w:2480,h:3508},A3:{w:3508,h:4961},A2:{w:4961,h:7016}};
-
-function outputSvg():SVGSVGElement{
- const svg=document.querySelector('svg[viewBox][class*="68vh"]') as SVGSVGElement|null;
- if(!svg)throw new Error('Editoriale SVG-Szene nicht gefunden.');
- return svg;
-}
+function outputSvg():SVGSVGElement{const svg=document.querySelector('svg[data-editorial-output="true"]') as SVGSVGElement|null;if(!svg)throw new Error('Editoriale SVG-Szene nicht gefunden.');return svg;}
 function isLandscape(svg:SVGSVGElement){const v=(svg.getAttribute('viewBox')||'0 0 1 1').split(/\s+/).map(Number);return v[2]>v[3]}
 function cloneForOutput(size:EditorialPaperSize){const source=outputSvg(),clone=source.cloneNode(true) as SVGSVGElement;const paper=mm[size],landscape=isLandscape(source);clone.removeAttribute('class');clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width',`${landscape?paper.h:paper.w}mm`);clone.setAttribute('height',`${landscape?paper.w:paper.h}mm`);return{clone,landscape}}
 function download(blob:Blob,name:string){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),0)}
