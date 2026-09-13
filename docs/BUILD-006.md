@@ -2,7 +2,11 @@
 
 ## Status
 
-006A Tauri Host Baseline: PASS. 006B Native Project I/O: REAL-WORLD PASS. 006C Native Export: REAL-WORLD PASS. 006D Packaging & Acceptance is active on branch `build/006-tauri-desktop-host`.
+**BUILD 006 — TAURI DESKTOP HOST — FINAL PASS 🟢**
+
+006A Tauri Host Baseline: PASS. 006B Native Project I/O: REAL-WORLD PASS. 006C Native Export: REAL-WORLD PASS. 006D Packaging & Acceptance: REAL-WORLD PASS. 006D-R1 Native Editorial Input Repair: REAL-WORLD PASS.
+
+Build 006 is merged to `main` and accepted as the native production baseline of the Northern Lines AIS Route Mapper.
 
 ## Product boundary
 
@@ -89,7 +93,7 @@ Packaging scope:
 
 ### 006D acceptance sequence
 
-Run from the repository root:
+The production gate was executed with:
 
 ```bash
 npm run lint
@@ -99,36 +103,67 @@ chmod +x scripts/install-macos-app.sh
 ./scripts/install-macos-app.sh
 ```
 
-Then close any development instance and launch the installed application:
+The installed application was then launched independently of the Vite development server:
 
 ```bash
 open "/Applications/Northern Lines AIS Route Mapper.app"
 ```
 
-Real-world acceptance in the installed app:
+Real-world acceptance covered:
 
-1. Cold start reaches the empty Mapper state without requiring the Vite development server.
-2. The Northern Lines application icon is present in Finder/Dock.
-3. Open an existing `.nlroute` through the native Open dialog.
-4. Modify editorial content and save with `Cmd+S`; the known project path is overwritten without another dialog.
-5. Use `Shift+Cmd+S`; a native Save As dialog opens and the new path becomes the current project path.
-6. Export one SVG through the native Save dialog and verify the file opens correctly.
-7. Export one PNG 300 dpi through the native Save dialog and verify the selected A-series format and orientation.
-8. Cancel a native Open, Save As and Export dialog once; cancellation must not damage the current project or produce an error.
-9. Quit and relaunch the installed app once more; cold start must remain clean.
+1. Cold start of the installed Mapper application.
+2. Northern Lines application icon in the native macOS bundle.
+3. Native opening of an existing `.nlroute` project.
+4. Direct `Cmd+S` save to the known project path without another dialog.
+5. `Shift+Cmd+S` Save As through the native dialog.
+6. Native SVG export.
+7. Native PNG 300 dpi export with the existing A-series format/orientation contract.
+8. Safe cancellation of native dialogs.
+9. Clean application relaunch.
+10. Clean repository state after production build and installation.
 
-### 006D production gate
+006D real-world acceptance: PASS.
 
-After the real-world checks:
+## 006D-R1 — Native Editorial Input Repair
 
-```bash
-git status
+During installed-app acceptance, the existing `window.prompt(...)` flow for adding editorial journey places proved unsuitable for the native Tauri production surface.
+
+The repair replaced the prompt chain with an embedded Northern Lines place-entry panel in `src/components/EditorialContentEditor.tsx`.
+
+The repair preserves:
+
+- the existing `EditorialJourneyPlace` / `.nlroute` data contract
+- decimal coordinate input with dot or comma
+- geographic anchors and editorial label offsets
+- existing place rendering and persistence
+- the frozen Editorial Cartography Visual Baseline 1
+
+No cartography, renderer or project-schema behavior was changed.
+
+006D-R1 real-world acceptance: PASS.
+
+## Final acceptance
+
+Build 006 is complete and merged to `main`.
+
+Accepted native production chain:
+
+```text
+Northern Lines AIS Route Mapper
+        ↓
+Tauri v2 macOS host
+        ↓
+.nlroute Open / Save / Save As
+        ↓
+Editorial Cartography
+        ↓
+Native SVG / PNG export
+        ↓
+Installed macOS application
 ```
 
-Expected repository state: clean working tree. Generated Tauri build output must remain outside version control.
+The production surface is the native Tauri application. The Editorial Cartography Visual Baseline 1 remains frozen.
 
-When all checks pass, Build 006 may be marked:
-
-`BUILD 006 — TAURI DESKTOP HOST — FINAL PASS`
+**BUILD 006 — TAURI DESKTOP HOST — FINAL PASS 🟢**
 
 Finder `.nlroute` file association remains explicitly out of scope for Build 006 unless separately approved.
