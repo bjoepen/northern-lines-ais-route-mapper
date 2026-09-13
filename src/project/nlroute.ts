@@ -2,6 +2,20 @@ import { MapStyleId, RouteColorMode, VoyageData } from '../types';
 
 export const NLROUTE_SCHEMA_VERSION = 1 as const;
 
+export interface EditorialControlPoint {
+  lat: number;
+  lon: number;
+}
+
+/**
+ * Mapper-owned presentation geometry for an upstream reconstructed route.
+ * The producer geometry and exact AIS/reconstruction endpoints remain untouched.
+ */
+export interface GapDisplayAdjustment {
+  routeId: string;
+  controlPoints: EditorialControlPoint[];
+}
+
 export interface NorthernLinesRouteProject {
   schemaVersion: typeof NLROUTE_SCHEMA_VERSION;
   project: {
@@ -15,7 +29,7 @@ export interface NorthernLinesRouteProject {
   };
   voyage: VoyageData;
   editorial: {
-    gapAdjustments: unknown[];
+    gapAdjustments: GapDisplayAdjustment[];
   };
   presentation: {
     mapStyle: MapStyleId;
@@ -48,6 +62,7 @@ export function createRouteProject(
   voyage: VoyageData,
   presentation: NorthernLinesRouteProject['presentation'],
   previous?: NorthernLinesRouteProject,
+  gapAdjustments?: GapDisplayAdjustment[],
 ): NorthernLinesRouteProject {
   const now = new Date().toISOString();
   return {
@@ -61,7 +76,7 @@ export function createRouteProject(
     source: { kind: projectSourceKind(voyage) },
     voyage,
     editorial: {
-      gapAdjustments: previous?.editorial.gapAdjustments || [],
+      gapAdjustments: gapAdjustments ?? previous?.editorial.gapAdjustments ?? [],
     },
     presentation,
   };
@@ -110,14 +125,23 @@ function reviveVoyageDates(voyage: VoyageData): VoyageData {
   };
 }
 
+function validAdjustment(value: unknown): value is GapDisplayAdjustment {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as GapDisplayAdjustment;
+  return typeof candidate.routeId === 'string'
+    && Array.isArray(candidate.controlPoints)
+    && candidate.controlPoints.every((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lon));
+}
+
 export function parseRouteProject(rawText: string): NorthernLinesRouteProject {
   const parsed = JSON.parse(rawText) as Partial<NorthernLinesRouteProject>;
   if (parsed.schemaVersion !== NLROUTE_SCHEMA_VERSION || !parsed.project || !parsed.voyage || !parsed.presentation) {
     throw new Error('Keine gültige Northern Lines .nlroute-Datei oder nicht unterstützte Schema-Version.');
   }
+  const adjustments = (parsed.editorial?.gapAdjustments || []).filter(validAdjustment);
   return {
     ...(parsed as NorthernLinesRouteProject),
     voyage: reviveVoyageDates(parsed.voyage),
-    editorial: parsed.editorial || { gapAdjustments: [] },
+    editorial: { gapAdjustments: adjustments },
   };
 }
