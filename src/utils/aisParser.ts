@@ -9,6 +9,7 @@ import {
 } from '../types';
 import { normalizeImportText, parseAisCsv, parseGpx } from '../import/normalizeImport';
 import { parseNorthernLinesJourneyText } from '../import/northernLinesJourney';
+import { parseMapperReviewText } from '../import/mapperReview';
 import { calculateBearing, calculateDistanceNM } from './geoUtils';
 
 export { parseAisCsv, parseGpx } from '../import/normalizeImport';
@@ -27,6 +28,9 @@ function provenance(
 }
 
 export function parseAisData(rawText: string, metadata?: Partial<VoyageMetadata>): VoyageData {
+  const mapperReview = parseMapperReviewText(rawText, metadata);
+  if (mapperReview) return mapperReview;
+
   const northernLinesJourney = parseNorthernLinesJourneyText(rawText, metadata);
   if (northernLinesJourney) return northernLinesJourney;
 
