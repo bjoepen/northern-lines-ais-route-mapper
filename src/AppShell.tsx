@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActiveTab, AnchorageStop, MapStyleId, RouteColorMode, VoyageData, VoyageMetadata } from './types';
 import { MacTitleBar } from './components/MacTitleBar';
-import { VoyageMap } from './components/VoyageMap';
+import { VoyageMap } from './components/VoyageMapEditorial';
 import { PlaybackController } from './components/PlaybackController';
 import { LogbookView } from './components/LogbookView';
 import { AisDataView } from './components/AisDataView';
