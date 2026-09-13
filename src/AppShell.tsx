@@ -6,7 +6,7 @@ import { VoyageMap } from './components/VoyageMapEditorial';
 import { PlaybackController } from './components/PlaybackController';
 import { LogbookView } from './components/LogbookView';
 import { AisDataView } from './components/AisDataView';
-import { ExportStudio } from './components/ExportStudio';
+import { EditorialExportView } from './components/EditorialExportView';
 import { createRouteProject, GapDisplayAdjustment, NorthernLinesRouteProject, parseRouteProject, projectFileName, serializeRouteProject } from './project/nlroute';
 import { FileCode, FolderOpen, Map as MapIcon } from 'lucide-react';
 
@@ -74,7 +74,7 @@ export default function AppShell(){
       {activeTab==='map'&&voyage&&<div className="w-full h-full relative"><VoyageMap voyage={voyage} activePointIndex={activePointIndex} onPointSelect={setActivePointIndex} mapStyle={mapStyle} showSeaMarks={showSeaMarks} routeColorMode={routeColorMode} onToggleRouteColorMode={toggleRouteColorMode} gapAdjustments={gapAdjustments} onGapAdjustmentsChange={updateAdjustments}/>{voyage.playbackAvailable!==false&&<PlaybackController points={voyage.points} currentIndex={activePointIndex} onIndexChange={setActivePointIndex} isPlaying={isPlaying} onTogglePlay={()=>setIsPlaying(!isPlaying)} playbackSpeed={playbackSpeed} onSpeedChange={setPlaybackSpeed}/>}</div>}
       {activeTab==='logbook'&&voyage&&<LogbookView voyage={voyage} onUpdateMetadata={handleUpdateMetadata} onSelectAnchorage={handleSelectAnchorage}/>} 
       {activeTab==='data'&&<AisDataView voyage={voyage||EMPTY_VOYAGE} onImportNewData={handleImportNewData}/>} 
-      {activeTab==='export'&&voyage&&<ExportStudio voyage={voyage}/>} 
+      {activeTab==='export'&&voyage&&<EditorialExportView voyage={voyage} gapAdjustments={gapAdjustments}/>} 
     </main>
     <footer className="nl-chrome h-7 border-t px-4 flex items-center justify-between text-[10px] text-[#66716d] shrink-0 tracking-[0.01em]"><div className="flex items-center gap-3">{voyage?<><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#6f7c68]"/>Track geladen</span><span className="text-[#c2bbad]">·</span><span>{voyage.points.length} Wegpunkte</span><span className="text-[#c2bbad]">·</span><span>{segmentCount} Segmente</span>{gapCount>0&&<><span className="text-[#c2bbad]">·</span><span>{gapCount} Gaps</span></>}{gapAdjustments.length>0&&<><span className="text-[#c2bbad]">·</span><span>{gapAdjustments.length} editorial angepasst</span></>}<span className="text-[#c2bbad]">·</span><span>{voyage.totalDistanceNM} sm</span>{dirty&&<><span className="text-[#c2bbad]">·</span><span className="text-[#9a7749]">ungespeichert</span></>}</>:<span>Bereit für Track-Import oder .nlroute-Projekt</span>}</div><div className="flex items-center gap-3"><span className="uppercase tracking-[0.16em] text-[#6f7c68]">Northern Lines</span>{voyage&&<><span className="text-[#c2bbad]">·</span><span>{project?'.nlroute Projekt':voyage.mapperReview?'Mapper Review':voyage.geometryOnly?'Geometry-only':voyage.northernLinesSource?'Normalized Track':voyage.metadata.mmsi?`MMSI ${voyage.metadata.mmsi}`:'GPS Track'}</span></>}</div></footer>
   </div>;
