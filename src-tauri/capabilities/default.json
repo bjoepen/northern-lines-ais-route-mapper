@@ -3,5 +3,12 @@
   "identifier": "default",
   "description": "Default desktop capability for the Northern Lines AIS Route Mapper.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-write-file"
+  ]
 }
