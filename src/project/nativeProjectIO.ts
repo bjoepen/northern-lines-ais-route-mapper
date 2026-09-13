@@ -1,7 +1,9 @@
-import { invoke, isTauri } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
 const NLROUTE_FILTER = [{ name: 'Northern Lines Route', extensions: ['nlroute'] }];
+
+type TauriWindow = Window & { __TAURI_INTERNALS__?: unknown };
 
 export interface NativeProjectOpenResult {
   path: string;
@@ -9,7 +11,7 @@ export interface NativeProjectOpenResult {
 }
 
 export function hasNativeProjectIO(): boolean {
-  return isTauri();
+  return typeof window !== 'undefined' && Boolean((window as TauriWindow).__TAURI_INTERNALS__);
 }
 
 export async function openNativeProject(): Promise<NativeProjectOpenResult | null> {
@@ -21,7 +23,7 @@ export async function openNativeProject(): Promise<NativeProjectOpenResult | nul
 
   if (!selected || Array.isArray(selected)) return null;
 
-  const contents = await invoke<string>('read_project_file', { path: selected });
+  const contents = await readTextFile(selected);
   return { path: selected, contents };
 }
 
@@ -42,6 +44,6 @@ export async function saveNativeProject(
 
   if (!targetPath) return null;
 
-  await invoke('write_project_file', { path: targetPath, contents });
+  await writeTextFile(targetPath, contents);
   return targetPath;
 }
