@@ -1,6 +1,7 @@
 import { GeoBounds } from './types';
 
 export type EditorialOrientation = 'portrait' | 'landscape';
+export type EditorialOrientationMode = 'auto' | EditorialOrientation;
 
 export interface EditorialComposition {
   width: number;
@@ -22,14 +23,13 @@ function score(bounds: GeoBounds, width: number, height: number): number {
   return routeW * routeH * scale * scale;
 }
 
-export function composeJourney(bounds: GeoBounds): EditorialComposition {
-  const portrait = { width: 960, height: 1320 };
-  const landscape = { width: 1320, height: 960 };
-  const orientation: EditorialOrientation = score(bounds, portrait.width, portrait.height) >= score(bounds, landscape.width, landscape.height)
-    ? 'portrait'
-    : 'landscape';
+export function composeJourney(bounds: GeoBounds, mode: EditorialOrientationMode = 'auto'): EditorialComposition {
+  const portrait = { width: 960, height: 1358 };
+  const landscape = { width: 1358, height: 960 };
+  const automatic: EditorialOrientation = score(bounds, portrait.width, portrait.height) >= score(bounds, landscape.width, landscape.height) ? 'portrait' : 'landscape';
+  const orientation: EditorialOrientation = mode === 'auto' ? automatic : mode;
   const page = orientation === 'portrait' ? portrait : landscape;
-  const headerHeight = 154;
+  const headerHeight = orientation === 'portrait' ? 154 : 138;
   const footerHeight = 112;
   return {
     ...page,
