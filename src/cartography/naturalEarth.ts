@@ -61,7 +61,7 @@ function geometryRings(geometry?: Geometry | null): GeoPoint[][] {
 async function fetchCollection(resolution: NaturalEarthResolution): Promise<FeatureCollection> {
   const response = await fetch(FILES[resolution]);
   if (!response.ok) {
-    throw new Error(`Natural Earth ${resolution} fehlt (${response.status}). Bitte npm run cartography:fetch-data ausführen.`);
+    throw new Error(`Natural Earth ${resolution} fehlt (${response.status}). Bitte node scripts/fetch-natural-earth.mjs ausführen.`);
   }
   const value = await response.json() as FeatureCollection;
   if (value.type !== 'FeatureCollection' || !Array.isArray(value.features)) {
