@@ -38,7 +38,7 @@ export const EditorialMapPreview: React.FC<Props> = ({ voyage, gapAdjustments })
       </div>
     </div>
     <div className="rounded-xl border border-[#d8d2c5] bg-[#ebe6da] p-3 flex justify-center min-h-[420px]">
-      {error && <div className="m-auto max-w-lg text-center text-xs leading-relaxed text-[#66716d]"><div className="font-semibold text-[#9a7749] mb-2">Geografiedaten nicht verfügbar</div><div>{error}</div><div className="mt-3 font-mono text-[11px] text-[#31575d]">npm run cartography:fetch-data</div></div>}
+      {error && <div className="m-auto max-w-lg text-center text-xs leading-relaxed text-[#66716d]"><div className="font-semibold text-[#9a7749] mb-2">Geografiedaten nicht verfügbar</div><div>{error}</div><div className="mt-3 font-mono text-[11px] text-[#31575d]">node scripts/fetch-natural-earth.mjs</div></div>}
       {!error && !scene && <div className="m-auto text-xs text-[#66716d]">Geografische Szene wird aufgebaut …</div>}
       {scene && <svg viewBox={`0 0 ${scene.width} ${scene.height}`} role="img" aria-label="Northern Lines editorial journey map" className="h-[68vh] max-h-[820px] w-auto max-w-full bg-[#f7f4ec] shadow-[0_10px_30px_rgba(36,48,46,.12)]">
         <rect width={scene.width} height={scene.height} fill="#f7f4ec"/>
