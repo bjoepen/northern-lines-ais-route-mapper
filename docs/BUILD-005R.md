@@ -73,6 +73,44 @@ A reconstructed route with `reviewState = review_required` is shown as a review 
 
 Playback is disabled for the Mapper Review artifact in 005R. The artifact contains real AIS timestamps, but its purpose is reconstruction review, not playback/product export. This prevents review geometry from being mistaken for a production route.
 
+## Project persistence — `.nlroute`
+
+Build 005R adds a native Mapper project format for browser persistence before the later Tauri v2 desktop host exists.
+
+```text
+<route-name>.nlroute
+```
+
+The project stores:
+
+- current `VoyageData`, including Mapper Review geometry and producer metadata;
+- source class (`normalized-track`, `mapper-review`, `generic-import`);
+- Mapper presentation state (`mapStyle`, OpenSeaMap seamarks, route colour mode);
+- an editorial namespace reserved for non-destructive Mapper adjustments;
+- project identity plus created/modified timestamps.
+
+The browser implementation supports:
+
+```text
+Open project  -> select .nlroute
+Save project  -> download .nlroute
+```
+
+Imported producer geometry is not rewritten into a producer contract. Future editorial reconstruction control points belong only to the `.nlroute` editorial namespace.
+
+A dirty-state marker is shown after imports, metadata changes or presentation changes. Navigating away from the page warns while changes are unsaved.
+
+## Product startup / empty state
+
+Synthetic demo voyages and the example-route menu have been removed. The Mapper now starts without a route and offers only real workflows:
+
+```text
+Track importieren
+.nlroute öffnen
+```
+
+`src/data/sampleVoyages.ts` is removed. No synthetic sailing trip is used as application state.
+
 ## Non-negotiable invariants
 
 1. AIS observations remain unchanged.
@@ -81,6 +119,8 @@ Playback is disabled for the Mapper Review artifact in 005R. The artifact contai
 4. Mapper does not silently approve reconstruction candidates.
 5. Mapper Review data is never written back as Normalized Track evidence.
 6. No reconstructed route is inferred from a known place or known Norway fixture.
+7. `.nlroute` is a Mapper project container, not a replacement producer format.
+8. Editorial adjustments must remain separate from upstream QA reconstruction geometry.
 
 ## Editorial adjustment follow-up
 
@@ -93,11 +133,11 @@ The approved Editorial Gap / Reconstruction Adjustment remains a Mapper responsi
 - adjustments are presentation-only and never overwrite QA reconstruction;
 - upstream production reconstruction always outranks an editorial adjustment.
 
-The interactive control-point editor is deliberately separated from the 005R import contract so the generic producer/consumer boundary can be accepted first.
+The `.nlroute` persistence layer now provides the durable home for those future control points.
 
-## Real-world acceptance target
+## Real-world acceptance
 
-Import the generically generated `mapper-review.geojson` and verify:
+The generically generated `mapper-review.geojson` passed local UI acceptance with:
 
 ```text
 4409 AIS points
@@ -107,7 +147,18 @@ Import the generically generated `mapper-review.geojson` and verify:
 Mapper Review mode visible
 Playback hidden
 observed and reconstructed route geometry visually distinct
-clicking reconstructed geometry exposes method/review metadata
+```
+
+Persistence acceptance for this increment:
+
+```text
+start with empty state
+import a real route
+save as .nlroute
+reload/open .nlroute
+route and presentation state return
+no demo voyage appears
+unsaved-change marker clears after save
 ```
 
 Quality gates:
@@ -126,4 +177,6 @@ Implementation branch:
 build/005R-mapper-review-contract
 ```
 
-Real-world UI acceptance remains pending local execution.
+Mapper Review import acceptance: PASS.
+
+`.nlroute` persistence / empty-state acceptance: pending local execution.
