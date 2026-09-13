@@ -2,7 +2,7 @@
 
 ## Status
 
-006A is accepted. 006B Native Project I/O is implemented on branch `build/006-tauri-desktop-host` and awaiting local acceptance.
+006A is accepted. 006B Native Project I/O is accepted locally. 006C Native Export is implemented on branch `build/006-tauri-desktop-host` and awaiting local acceptance.
 
 ## Product boundary
 
@@ -49,17 +49,31 @@ Implementation boundary:
 - Tauri plugins: dialog and filesystem
 - no renderer, cartography, Editorial Cartography or `.nlroute` schema changes
 
-Explicitly out of scope:
+006B local acceptance: PASS.
 
-- Finder file association / double-click open
-- native export dialogs
-- document recents
-- autosave
-- renderer or visual changes
+## 006C — Native Export
 
-## 006B acceptance
+Contract:
 
-After synchronizing the branch and installing the two frontend plugins, run:
+- the approved Editorial Cartography renderer remains unchanged
+- A5/A4/A3/A2 sizing and 300 dpi PNG raster dimensions remain unchanged
+- SVG and PNG continue to use the current file naming contract
+- inside Tauri, SVG and PNG export use a native macOS Save dialog
+- the user chooses destination and file name instead of the file being dropped into Downloads
+- cancelling the Save dialog produces no file and no error state
+- outside Tauri, the existing browser download fallback remains available
+- no export path is persisted as project state
+
+Implementation boundary:
+
+- native export integration lives in `src/export/editorialOutput.ts`
+- native Save dialog uses the existing Tauri dialog plugin
+- binary output uses the existing Tauri filesystem plugin
+- no changes to map composition, geography, typography, colors, Editorial Visual Baseline 1 or `.nlroute`
+
+## 006C acceptance
+
+Run:
 
 ```bash
 npm run lint
@@ -69,13 +83,13 @@ npm run tauri dev
 
 Real-world checks in the native app:
 
-1. `Cmd+O` opens a valid `.nlroute` through the native macOS dialog.
-2. Edit any project field; dirty state appears.
-3. `Cmd+S` saves back to the opened file without another dialog and clears dirty state.
-4. `Shift+Cmd+S` opens the native Save As dialog, writes the selected file and makes that path the active project path.
-5. Start/import a new journey; `Cmd+S` opens Save As because no native path is known yet.
-6. Cancel Open and Save As dialogs; project and dirty state remain unchanged.
-7. Browser `npm run dev` still uses the existing file input/download fallback.
+1. Open a journey and go to Export.
+2. Export SVG. A native macOS Save dialog must open.
+3. Select a custom folder and file name. The SVG must be written there and nowhere else.
+4. Export PNG 300 dpi. A native macOS Save dialog must open.
+5. Select a custom folder and file name. The PNG must be written there and keep the selected A-series dimensions/orientation.
+6. Cancel both SVG and PNG Save dialogs. No file must be created and no error alert may appear.
+7. Run the browser app with `npm run dev`; SVG/PNG must still use the existing browser download fallback.
 
 Production gate after functional PASS:
 
@@ -83,4 +97,18 @@ Production gate after functional PASS:
 npm run tauri build
 ```
 
-Expected result: native project I/O without any change to Mapper semantics or approved visual output.
+Expected result: native project I/O and native editorial export without any change to Mapper semantics or approved visual output.
+
+## Next step after 006C PASS
+
+006D — Packaging & Acceptance
+
+Planned scope:
+
+- final macOS application bundle acceptance
+- clean-install / cold-start check
+- project Open / Save / Save As smoke test
+- native SVG / PNG export smoke test
+- package documentation and release readiness
+
+Finder `.nlroute` file association remains a separate follow-up unless explicitly pulled into 006D.
