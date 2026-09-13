@@ -8,6 +8,7 @@ export type TrackSourceFormat =
   | 'json'
   | 'geojson'
   | 'northern-lines-normalized-track'
+  | 'northern-lines-mapper-review'
   | 'synthetic'
   | 'unknown';
 
@@ -38,7 +39,7 @@ export interface AisPoint {
   elapsedSeconds?: number;
 }
 
-/** A continuous route section. No renderer may connect two segments implicitly. */
+/** A continuous observed route section. No renderer may connect two segments implicitly. */
 export interface TrackSegment {
   id: string;
   points: AisPoint[];
@@ -66,6 +67,51 @@ export interface NorthernLinesJourneySource {
   normalizationPolicyVersion?: string;
 }
 
+/** A coordinate used by Mapper Review geometry. It is not an AIS observation. */
+export interface ReviewCoordinate {
+  lat: number;
+  lon: number;
+}
+
+export type MapperReviewLayer = 'observed_route' | 'reconstructed_route';
+
+/**
+ * Build 005R geometry supplied by Cartography for human Mapper review.
+ * Reconstructed geometry is derived evidence and must never be promoted to observed AIS data.
+ */
+export interface MapperReviewRoute {
+  id: string;
+  routeLayer: MapperReviewLayer;
+  evidenceClass?: string;
+  sourceSegmentIndex?: number;
+  sourceEventIndex?: number;
+  method?: string;
+  methodVersion?: string;
+  reviewState?: string;
+  visualAcceptance?: string;
+  classification?: string;
+  policyReason?: string;
+  note?: string | null;
+  points: ReviewCoordinate[];
+}
+
+export interface MapperReviewSource {
+  schemaVersion?: number;
+  journeyId?: string;
+  purpose?: string;
+  productionApproved?: boolean;
+  motionContextPolicyVersion?: string;
+  reconstructionPolicyVersion?: string;
+  sourceBoundsPolicyVersion?: string;
+}
+
+export interface MapperReviewState {
+  source: MapperReviewSource;
+  observedRoutes: MapperReviewRoute[];
+  reconstructedRoutes: MapperReviewRoute[];
+  reviewRequiredCount: number;
+}
+
 export interface TrackContractSummary {
   version: '0.2.0';
   rawPointCount: number;
@@ -84,6 +130,7 @@ export type ImportDetectedFormat =
   | 'json'
   | 'geojson'
   | 'northern-lines-normalized-track'
+  | 'northern-lines-mapper-review'
   | 'mixed'
   | 'unknown';
 
@@ -97,10 +144,8 @@ export interface ImportNormalizationSummary {
   incompleteNmeaFragments: number;
 }
 
-/** Overall verdict emitted by Northern Lines Tracker QA and consumed read-only by the Mapper. */
 export type JourneyQualityStatus = 'pass' | 'warn' | 'fail' | 'unknown';
 
-/** Known QA issue families. Unknown future codes remain representable as strings. */
 export type JourneyQualityIssueCode =
   | 'TROLL_CROSSING'
   | 'TRACK_GAP'
@@ -122,10 +167,6 @@ export interface JourneyQualityIssue {
   details?: Record<string, unknown>;
 }
 
-/**
- * Build 004 boundary: this report is produced upstream by Tracker QA.
- * The Route Mapper may display and gate on it, but must not recompute it.
- */
 export interface JourneyQualityReport {
   contractVersion: '0.4.0';
   status: JourneyQualityStatus;
@@ -141,13 +182,9 @@ export interface JourneyQualityReport {
 }
 
 export interface JourneyQualityState {
-  /** Whether a Tracker QA report accompanied this voyage. */
   supplied: boolean;
-  /** Parsed upstream report; absent for legacy/demo/general imports. */
   report?: JourneyQualityReport;
-  /** Editorial export should only be trusted when this is true. */
   editorialReady: boolean;
-  /** Human-readable reason when editorialReady is false. */
   reason?: string;
 }
 
@@ -173,24 +210,17 @@ export interface VoyageMetadata {
 
 export interface VoyageData {
   metadata: VoyageMetadata;
-  /** Immutable source observations when the imported format actually contains them. */
   rawPoints: AisPoint[];
-  /** Flat canonical index retained for current UI/playback selection. */
   points: AisPoint[];
-  /** Continuous route sections. Renderers must never bridge between them. */
   segments?: TrackSegment[];
-  /** Explicit discontinuities supplied upstream; Mapper never invents gap geometry. */
   gaps?: TrackGap[];
-  /** False for geometry-only review artifacts without trustworthy timestamps. */
   playbackAvailable?: boolean;
-  /** True for GeoJSON review artifacts that contain geometry but no journey time basis. */
   geometryOnly?: boolean;
-  /** Provenance of a native Northern Lines Normalized Track import. */
   northernLinesSource?: NorthernLinesJourneySource;
+  /** Present only when a Cartography mapper-review GeoJSON was imported. */
+  mapperReview?: MapperReviewState;
   trackContract: TrackContractSummary;
-  /** Present for text/file imports normalized by Build 003/005. */
   importNormalization?: ImportNormalizationSummary;
-  /** Upstream Tracker QA state. Mapper consumes this contract but never recomputes QA. */
   journeyQuality?: JourneyQualityState;
   totalDistanceNM: number;
   avgSpeedKnots: number;
@@ -207,7 +237,6 @@ export interface VoyageData {
   };
 }
 
-/** Keyless map styles guaranteed by the Northern Lines map baseline. */
 export type MapStyleId = 'nautical' | 'osm';
 export type RouteColorMode = 'speed' | 'monochrome' | 'gradient';
 export type ActiveTab = 'map' | 'logbook' | 'data' | 'export';
